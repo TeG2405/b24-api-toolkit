@@ -1,0 +1,36 @@
+{
+  "name": "b24api",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/bubblesortt/b24api#readme",
+  "bugs": {
+    "url": "https://github.com/bubblesortt/b24api/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bubblesortt/b24api.git"
+  },
+  "license": "ISC",
+  "author": "Alexandr Bychkin",
+  "type": "module",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "vitest --run",
+    "dev:test": "vitest",
+    "tsc": "tsc"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.1",
+    "dotenv": "^17.2.2",
+    "es-toolkit": "^1.39.10",
+    "ky": "^1.10.0",
+    "msw": "^2.11.2",
+    "nock": "^14.0.10",
+    "typescript": "^5.5.4",
+    "vitest": "^3.2.4",
+    "zod": "^4.1.8"
+  }
+}
