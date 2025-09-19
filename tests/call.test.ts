@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import useApi from "./../src/index.ts";
 import nock from "nock";
-import buildQuery from "../src/build-query.js";
 import { CODES } from "../src/types.js";
 
 const mockTime = {
@@ -49,9 +48,9 @@ describe("Call tests", () => {
     };
     const parameters = {
       select: ["ID", "STATUS_ID"],
-      filter: {">DATE_CREATE": new Date()},
+      filter: {">DATE_CREATE": new Date().toString()},
     }
-    nock(process.env.WEBHOOK_URL || "").post('/crm.lead.list').query(buildQuery(parameters)).reply(CODES.OK, response);
+    nock(process.env.WEBHOOK_URL || "").post('/crm.lead.list', parameters).reply(CODES.OK, response);
 
     const api = useApi();
     const result = await api.call({method: "crm.lead.list", parameters});
@@ -100,7 +99,6 @@ describe("Call tests", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(api.config.retry.attempts + 1);
   }, 30000);
 
-  // TODO: Сейчас не проходит, поскольку ошибка по http code выбрасывается раньше и проверка по коду ошибки не происходит
   it("Запрос с ошибкой и ретраем по коду ошибки", async () => {
     nock(process.env.WEBHOOK_URL || "").post('/profile').reply(CODES.FORBIDDEN, {
       error: "OPERATION_TIME_LIMIT",

@@ -1,3 +1,4 @@
+import type { Options } from "ky";
 
 export enum CODES {
   // 1xx Informational
@@ -94,10 +95,29 @@ export type Config = {
     methods: string[];
   };
   listSize: number;
-  batchsize: number;
+  batchSize: number;
 }
 
 export type ResponseError = { error: string; error_description?: string; };
 export type ResponseSuccess = { result: object; time: object };
 
 export type ResponseType = ResponseError | ResponseSuccess;
+
+export type ApiRequest = { method: string, parameters?: ApiRecord, options?: Options }
+
+
+export type Batch = {
+  (args: {
+    requests: [ApiRequest, unknown][];
+    withPayload: true;
+    batchSize?: number;
+    listMethod?: boolean;
+  }): Promise<unknown>;
+
+  (args: {
+    requests: ApiRequest[];
+    withPayload?: false | undefined;
+    batchSize?: number;
+    listMethod?: boolean;
+  }): Promise<unknown>;
+};

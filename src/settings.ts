@@ -26,7 +26,7 @@ const config: Config = {
     methods: ['get', 'post', 'put', 'delete', 'patch', 'head', 'options', 'trace'],
   },
   listSize: 50,
-  batchsize: 50,
+  batchSize: 50,
 }
 
 export default config;

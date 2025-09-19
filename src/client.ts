@@ -5,6 +5,7 @@ const client = ky.extend({
   method: "post",
   prefixUrl: settings.webhookUrl,
   timeout: settings.httpTimeout,
+  throwHttpErrors: false,
   retry: {
     limit: settings.retry.attempts,
     statusCodes: settings.retry.statuses,
