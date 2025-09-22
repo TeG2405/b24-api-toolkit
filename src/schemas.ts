@@ -22,3 +22,17 @@ export const ResponseErrorSchema = z.object({
   error: z.string(),
   error_description: z.string().optional(),
 })
+
+export const ResponseBatchSchema = z.object({
+  result: z.object({
+    result: z.record(z.string(), z.unknown()),
+    result_error: z.union([z.record(z.string(), ResponseErrorSchema), z.tuple([])]),
+    result_total: z.union([z.record(z.string(), z.number()), z.tuple([])]),
+    result_next: z.union([z.record(z.string(), z.number()), z.tuple([])]),
+    result_time: z.union([z.record(z.string(), ResponseTimeSchema), z.tuple([])]),
+  }),
+  time: ResponseTimeSchema,
+  total: z.number().optional(),
+  next: z.number().optional(),
+})
+

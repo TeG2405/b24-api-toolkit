@@ -72,7 +72,7 @@ describe("Call tests", () => {
 
     await expect(async() => await api.call({method: "profile"}))
       .rejects.toThrowError(`Request failed with status code ${CODES.TOO_MANY_REQUESTS}`);
-    expect(fetchSpy).toHaveBeenCalledTimes(api.config.retry.attempts + 1);
+    expect(fetchSpy).toHaveBeenCalledTimes(api.config.retry.attempts);
   }, 30000);
 
   it("Успешный запрос с ошибкой", async () => {
@@ -96,7 +96,7 @@ describe("Call tests", () => {
     const api = useApi();
     await expect(async() => await api.call({method: "profile"}))
       .rejects.toThrowError(`OPERATION_TIME_LIMIT: Method is blocked due to operation time limit.`);
-    expect(fetchSpy).toHaveBeenCalledTimes(api.config.retry.attempts + 1);
+    expect(fetchSpy).toHaveBeenCalledTimes(api.config.retry.attempts);
   }, 30000);
 
   it("Запрос с ошибкой и ретраем по коду ошибки", async () => {
@@ -109,7 +109,7 @@ describe("Call tests", () => {
     const api = useApi();
     await expect(async() => await api.call({method: "profile"}))
       .rejects.toThrowError(`OPERATION_TIME_LIMIT: Method is blocked due to operation time limit.`);
-    expect(fetchSpy).toHaveBeenCalledTimes(api.config.retry.attempts + 1);
+    expect(fetchSpy).toHaveBeenCalledTimes(api.config.retry.attempts);
   }, 30000);
 
   it("Успешный запрос с ошибкой, ретраем по коду ошибки и получения ответа", async () => {
