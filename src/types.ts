@@ -1,4 +1,6 @@
 import type { Options } from "ky";
+import { ResponseErrorSchema, ResponseSchema } from "./schemas.ts";
+import * as z from "zod";
 
 export enum CODES {
   // 1xx Informational
@@ -98,8 +100,8 @@ export type Config = {
   batchSize: number;
 }
 
-export type ResponseError = { error: string; error_description?: string; };
-export type ResponseSuccess = { result: object; time: object };
+export type ResponseError = z.infer<typeof ResponseErrorSchema>;
+export type ResponseSuccess = z.infer<typeof ResponseSchema>;
 
 export type ResponseType = ResponseError | ResponseSuccess;
 
