@@ -1,10 +1,23 @@
-import type { ApiRequest, ResponseError, ResponseType } from "./types.ts";
+import type { ApiRequest, ResponseBatch, ResponseError, ResponseSuccess, ResponseType } from "./types.ts";
 import { ResponseBatchSchema, ResponseErrorSchema, ResponseSchema } from "./schemas.ts";
 import client from "./client.ts"
 import buildQuery from "./build-query.ts";
 import config from "./settings.ts";
-import { chunk, compact, retry, snakeCase } from "es-toolkit";
-import { has, includes, join, map, padStart, reduce, set } from "es-toolkit/compat";
+import { chunk, compact, difference, flatten, mapValues, retry, snakeCase } from "es-toolkit";
+import {
+  first,
+  get,
+  includes,
+  isEmpty,
+  join,
+  keys,
+  map,
+  padStart,
+  reduce,
+  set,
+  some,
+  values
+} from "es-toolkit/compat";
 import type { KyResponse } from "ky";
 const useApi = () => {
 
@@ -15,11 +28,11 @@ const useApi = () => {
   const isResponseError = (body: ResponseType): body is ResponseError =>
     ResponseErrorSchema.safeParse(body).success;
 
-  const shouldRetry = ({ response, body }: { response: KyResponse, body: ResponseType }) => {
+  const shouldCallRetry = ({ response, body }: { response: KyResponse, body: ResponseType }) => {
     if (includes(config.retry.statuses, response.status)) return true;
     return isResponseError(body) && includes(config.retry.errors, snakeCase(body.error));
-
   }
+
   const call = async ({ method, parameters, options = {} }: ApiRequest) => {
     const settings = {
       json: parameters,
@@ -27,53 +40,85 @@ const useApi = () => {
     };
     const controller = new AbortController();
     let attempt = 0;
-
     return await retry(async () => {
       attempt++;
       const response = await client(method, settings);
       const body = await response.json<ResponseType>();
-
-      if (shouldRetry({ response, body }) && attempt < config.retry.attempts) throw new Error("__RETRY__");
+      if (shouldCallRetry({ response, body }) && attempt < config.retry.attempts) throw new Error("__RETRY__");
       controller.abort();
       if (isResponseError(body)) throwError(body);
       if (response.status >= 300) throw new Error(`Request failed with status code ${response.status}`);
       return ResponseSchema.parse(body);
     }, {
       retries: config.retry.attempts,
-      delay: (attempts) => 0.5 * (2 ** (attempts - 1)) * 1000,
+      delay: config.retry.delay,
       signal: controller.signal,
     });
   };
 
+
+  const shouldBatchRetry = (errors: ResponseBatch['result_error']) => {
+    return some(errors, (item) => {
+      const error = ResponseErrorSchema.parse(item);
+      return includes(config.retry.errors, snakeCase(error.error));
+    });
+  }
   const batch = async ({ requests, batchSize, listSize, withPayload }: {requests: ApiRequest[], batchSize?: number, listSize?: number, withPayload?: boolean}) => {
     const size = batchSize || config.batchSize;
     const chunks = chunk(requests, size);
-    const responses = [];
+    const responses: ResponseSuccess[][] = [];
     for (const chunk of chunks) {
       const width = String(chunk.length).length;
-      const keys = map(chunk, (_, idx) => `_${padStart(String(idx), width, '0')}`)
+      const commands: Record<string, string> = reduce(chunk, (acc, curr, idx) => {
+        const key = `_${padStart(String(idx), width, '0')}`;
+        return set(acc, key, join(compact([curr.method, buildQuery(curr.parameters || {})]), "?"));
+      }, {});
       const parameters = {
         halt: true,
-        cmd: reduce(chunk, (acc, curr, idx) => {
-          const key = String(keys[idx]);
-          return set(acc, key, join(compact([curr.method, buildQuery(curr.parameters || {})]), "?"));
-        }, {})
+        cmd: commands,
       };
+      let attempt = 0;
+      const controller = new AbortController();
 
-      const result = ResponseBatchSchema.parse(await call({ method: "batch", parameters }));
-      const errors = result.result.result_error;
-      responses.push(map(keys, (key) => {
-        if (has(result.result.result_error, key)) {
-          const error = ResponseErrorSchema.parse(result.result.result_error);
-          if (includes(config.retry.errors, snakeCase(error.error))) {
-
-          }
+      const result = await retry(async () => {
+        attempt++;
+        const response = await call({ method: "batch", parameters });
+        const result = ResponseBatchSchema.parse(response.result);
+        const errors = result.result_error;
+        const missedResultKeys = difference(keys(commands), keys(result.result));
+        const missedResultTimeKeys = difference(keys(commands), keys(result.result_time));
+        if (shouldBatchRetry(errors) && attempt < config.retry.attempts) throw new Error("__RETRY__");
+        controller.abort();
+        if (!isEmpty(errors)) throwError(ResponseErrorSchema.parse(first(values(errors))));
+        if (!isEmpty(missedResultKeys)) {
+          const key = String(first(missedResultKeys));
+          throw new Error(`Expecting 'result' to contain result for command {{'${key}': '${commands[key]}'}}.`);
         }
+        if (!isEmpty(missedResultTimeKeys)) {
+          const key = String(first(missedResultTimeKeys));
+          throw new Error(`Expecting 'result_time' to contain result for command {{'${key}': '${commands[key]}'}}.`);
+        }
+        return result
+      }, {
+        retries: config.retry.attempts,
+        delay: config.retry.delay,
+        signal: controller.signal,
+      })
+
+      responses.push(map(commands, (_, key) => {
+        return ResponseSchema.parse({
+          result: get(result.result, key),
+          time: get(result.result_time, key),
+          total: get(result.result_total, key),
+          next: get(result.result_next, key),
+        })
       }))
     }
+    return flatten(responses);
   }
 
   return {
+    batch,
     call,
     buildQuery,
     config

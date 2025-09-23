@@ -11,7 +11,7 @@ const config: Config = {
   httpTimeout: 30000,
   retry: {
     attempts: 5,
-    delay: 5000,
+    delay: (attempts) => 0.5 * (2 ** (attempts - 1)) * 1000,
     backoff: 2,
     errors: ["query_limit_exceeded", "operation_time_limit"],
     statuses: [

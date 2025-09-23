@@ -1,5 +1,5 @@
 import type { Options } from "ky";
-import { ResponseErrorSchema, ResponseSchema } from "./schemas.ts";
+import { ResponseBatchSchema, ResponseErrorSchema, ResponseSchema } from "./schemas.ts";
 import * as z from "zod";
 
 export enum CODES {
@@ -90,7 +90,7 @@ export type Config = {
   httpTimeout: number;
   retry: {
     attempts: number;
-    delay: number;
+    delay: number | ((attempts: number) => number);
     backoff: number;
     errors: string[];
     statuses: number[];
@@ -102,6 +102,7 @@ export type Config = {
 
 export type ResponseError = z.infer<typeof ResponseErrorSchema>;
 export type ResponseSuccess = z.infer<typeof ResponseSchema>;
+export type ResponseBatch = z.infer<typeof ResponseBatchSchema>;
 
 export type ResponseType = ResponseError | ResponseSuccess;
 
