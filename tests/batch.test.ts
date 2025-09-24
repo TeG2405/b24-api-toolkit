@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from "vitest";
 import useApi from "./../src/index.ts";
 import nock from "nock";
 import { CODES } from "../src/types.js";
-import { map } from "es-toolkit/compat";
 
 const mockTime = {
   "start": 1741699660.029826,
@@ -60,7 +59,7 @@ describe("Call tests", () => {
         {method: "crm.lead.list", parameters: {"select": ["ID", "STATUS_ID"], "start": -1}},
         {method: "department.get", parameters: {"ID": 1}},
       ]});
-    expect(map(response, 'result')).toEqual(result);
+    expect(response).toEqual(result);
   }, 30000);
 
   it("Запрос с ошибкой", async () => {
@@ -182,7 +181,7 @@ describe("Call tests", () => {
         {method: "crm.lead.list", parameters: {"select": ["ID", "STATUS_ID"], "start": -1}},
         {method: "department.get", parameters: {"ID": 1}},
       ]});
-    expect(map(response, 'result')).toEqual(result);
+    expect(response).toEqual(result);
     expect(fetchSpy).toHaveBeenCalledTimes(attempts + 1);
   }, 30000);
 
@@ -247,5 +246,42 @@ describe("Call tests", () => {
         {method: "department.get", parameters: {"ID": 1}},
       ] }))
       .rejects.toThrowError(`Expecting 'result_time' to contain result for command {{'_1': 'crm.lead.list?select%5B0%5D=ID&select%5B1%5D=STATUS_ID&start=-1'}}.`);
+  }, 30000);
+
+  it("Запрос с payload", async () => {
+    const result = [
+      [mockProfile, 1],
+      [{"items": mockLeads}, 2],
+      [[{"ID": "1", "NAME": "Main department", "SORT": 500, "UF_HEAD": "1"}], 3],
+    ];
+    nock(process.env.WEBHOOK_URL || "").post('/batch', {
+      "halt": true,
+      "cmd": {
+        "_0": "profile",
+        "_1": "crm.lead.list?select%5B0%5D=ID&select%5B1%5D=STATUS_ID&start=-1",
+        "_2": "department.get?ID=1",
+      }
+    }).reply(CODES.OK, {
+      result: {
+        result: {
+          '_0': mockProfile,
+          '_1': {items: mockLeads},
+          '_2': [{"ID": "1", "NAME": "Main department", "SORT": 500, "UF_HEAD": "1"}],
+        },
+        result_error: [],
+        result_total: {"_1": 2, "_2": 1},
+        result_next: [],
+        result_time: {"_0": mockTime, "_1": mockTime, "_2": mockTime},
+      },
+      time: mockTime,
+    });
+
+    const api = useApi();
+    const response = await api.batch({ requests: [
+        {method: "profile", payload: 1},
+        {method: "crm.lead.list", parameters: {"select": ["ID", "STATUS_ID"], "start": -1}, payload: 2},
+        {method: "department.get", parameters: {"ID": 1}, payload: 3},
+      ], withPayload: true});
+    expect(response).toEqual(result);
   }, 30000);
 });

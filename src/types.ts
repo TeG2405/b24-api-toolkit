@@ -109,18 +109,20 @@ export type ResponseType = ResponseError | ResponseSuccess;
 export type ApiRequest = { method: string, parameters?: ApiRecord, options?: Options }
 
 
-export type Batch = {
-  (args: {
-    requests: [ApiRequest, unknown][];
-    withPayload: true;
-    batchSize?: number;
-    listMethod?: boolean;
-  }): Promise<unknown>;
+export type ApiRequestWithPayload = ApiRequest & { payload: unknown };
+
+export interface Batch {
+  (args:{
+    requests: ApiRequestWithPayload[],
+    batchSize?: number,
+    listSize?: number,
+    withPayload: true,
+  }): Promise<Array<[ResponseSuccess, unknown]>>
 
   (args: {
-    requests: ApiRequest[];
-    withPayload?: false | undefined;
-    batchSize?: number;
-    listMethod?: boolean;
-  }): Promise<unknown>;
-};
+    requests: ApiRequest[],
+    batchSize?: number,
+    listSize?: number,
+    withPayload?: false,
+  }): Promise<Array<ResponseSuccess>>
+}

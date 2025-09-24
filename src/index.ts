@@ -1,17 +1,17 @@
-import type { ApiRequest, ResponseBatch, ResponseError, ResponseSuccess, ResponseType } from "./types.ts";
+import type { ApiRequest, Batch, ResponseBatch, ResponseError, ResponseSuccess, ResponseType } from "./types.ts";
 import { ResponseBatchSchema, ResponseErrorSchema, ResponseSchema } from "./schemas.ts";
 import client from "./client.ts"
 import buildQuery from "./build-query.ts";
 import config from "./settings.ts";
-import { chunk, compact, difference, flatten, mapValues, retry, snakeCase } from "es-toolkit";
+import { chunk, compact, difference, mapValues, retry, snakeCase } from "es-toolkit";
 import {
   first,
+  forEach,
   get,
   includes,
   isEmpty,
   join,
   keys,
-  map,
   padStart,
   reduce,
   set,
@@ -63,19 +63,22 @@ const useApi = () => {
       return includes(config.retry.errors, snakeCase(error.error));
     });
   }
-  const batch = async ({ requests, batchSize, listSize, withPayload }: {requests: ApiRequest[], batchSize?: number, listSize?: number, withPayload?: boolean}) => {
+  const batch: Batch = async ({ requests, batchSize, listSize, withPayload }) => {
     const size = batchSize || config.batchSize;
     const chunks = chunk(requests, size);
-    const responses: ResponseSuccess[][] = [];
+    const responses: ResponseSuccess["result"][] = [];
+    const responsesWithPayload: [ResponseSuccess["result"], unknown][] = [];
     for (const chunk of chunks) {
       const width = String(chunk.length).length;
-      const commands: Record<string, string> = reduce(chunk, (acc, curr, idx) => {
+      const commands: Record<string, { cmd: string; payload?: unknown }> = reduce(chunk, (acc, curr, idx) => {
         const key = `_${padStart(String(idx), width, '0')}`;
-        return set(acc, key, join(compact([curr.method, buildQuery(curr.parameters || {})]), "?"));
+        const cmd = join(compact([curr.method, buildQuery(curr.parameters || {})]), "?");
+        const payload = get(curr, "payload");
+        return set(acc, key, { cmd, payload });
       }, {});
       const parameters = {
         halt: true,
-        cmd: commands,
+        cmd: mapValues(commands, (command) => command.cmd),
       };
       let attempt = 0;
       const controller = new AbortController();
@@ -92,11 +95,11 @@ const useApi = () => {
         if (!isEmpty(errors)) throwError(ResponseErrorSchema.parse(first(values(errors))));
         if (!isEmpty(missedResultKeys)) {
           const key = String(first(missedResultKeys));
-          throw new Error(`Expecting 'result' to contain result for command {{'${key}': '${commands[key]}'}}.`);
+          throw new Error(`Expecting 'result' to contain result for command {{'${key}': '${ get(commands, [key, "cmd"]) }'}}.`);
         }
         if (!isEmpty(missedResultTimeKeys)) {
           const key = String(first(missedResultTimeKeys));
-          throw new Error(`Expecting 'result_time' to contain result for command {{'${key}': '${commands[key]}'}}.`);
+          throw new Error(`Expecting 'result_time' to contain result for command {{'${key}': '${get(commands, [key, "cmd"])}'}}.`);
         }
         return result
       }, {
@@ -105,16 +108,18 @@ const useApi = () => {
         signal: controller.signal,
       })
 
-      responses.push(map(commands, (_, key) => {
-        return ResponseSchema.parse({
+      forEach(commands, (item, key) => {
+        const res = ResponseSchema.parse({
           result: get(result.result, key),
           time: get(result.result_time, key),
           total: get(result.result_total, key),
           next: get(result.result_next, key),
         })
-      }))
+        withPayload ? responsesWithPayload.push([res.result, item.payload]) : responses.push(res.result)
+      })
     }
-    return flatten(responses);
+
+    return withPayload ? responsesWithPayload : responses;
   }
 
   return {
