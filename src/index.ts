@@ -28,7 +28,8 @@ import {
   set,
   size,
   some,
-  values
+  values,
+  castArray
 } from "es-toolkit/compat";
 import type { KyResponse } from "ky";
 const useApi = () => {
@@ -50,6 +51,17 @@ const useApi = () => {
       const error = ResponseErrorSchema.parse(item);
       return includes(config.retry.errors, snakeCase(error.error));
     });
+  }
+
+  const getListResult = (result: unknown) => {
+    if (!Array.isArray(result) && !isPlainObject(result)) throw new Error(`Expecting 'result' to be a 'list' or a 'dict'. Got: ${result}`);
+    if (Array.isArray(result)) return isEmpty(result) ? [] : result;
+    const clues = keys(result);
+    if (isEmpty(clues)) return [];
+    if (size(clues) !== 1) throw new Error(`If 'result' is a 'dict', expecting single item. Got: ${result}`);
+    const value = get(result, String(first(clues)));
+    if (!Array.isArray(value)) throw new TypeError(`If 'result' is a 'dict', expecting single item to be a 'list'. Got: ${result}`);
+    return value;
   }
 
   const call = async ({ method, parameters, options = {} }: ApiRequest) => {
@@ -75,8 +87,17 @@ const useApi = () => {
     });
   };
 
+  const getTail = ({ request, response, listSize }: {request: ApiRequest, response: ResponseSuccess, listSize: number}) => {
+    if (response.next && response.next != listSize) throw new Error(`Expecting list chunk size to be ${listSize}}. Got: ${response.next}`)
+    const total = response.total || 0;
+    return map(range(listSize, total, listSize), (start, idx) => {
+      const req = cloneDeep(request);
+      return set(req, "parameters.start", start);
+    })
+  }
+
   //@ts-ignore
-  const batch: Batch = async ({ requests, batchSize, listSize, withPayload }) => {
+  const batch: Batch = async ({ requests, batchSize, listMethod, withPayload }) => {
     const size = batchSize || config.batchSize;
     const chunks = chunk(requests, size);
     const responses: ResponseSuccess["result"][] = [];
@@ -128,31 +149,12 @@ const useApi = () => {
           total: get(result.result_total, key),
           next: get(result.result_next, key),
         })
-        withPayload ? responsesWithPayload.push([res.result, item.payload]) : responses.push(res.result)
+        const data = listMethod ? getListResult(res.result) : res.result;
+        withPayload ? responsesWithPayload.push([data, item.payload]) : responses.push(data)
       })
     }
 
     return withPayload ? responsesWithPayload : responses;
-  }
-
-  const getListResult = (result: unknown) => {
-    if (!Array.isArray(result) && !isPlainObject(result)) throw new Error(`Expecting 'result' to be a 'list' or a 'dict'. Got: ${result}`);
-    if (Array.isArray(result)) return isEmpty(result) ? [] : result;
-    const clues = keys(result);
-    if (isEmpty(clues)) return [];
-    if (size(clues) !== 1) throw new Error(`If 'result' is a 'dict', expecting single item. Got: ${result}`);
-    const value = get(result, String(first(clues)));
-    if (!Array.isArray(value)) throw new TypeError(`If 'result' is a 'dict', expecting single item to be a 'list'. Got: ${result}`);
-    return value;
-  }
-
-  const getTail = ({ request, response, listSize }: {request: ApiRequest, response: ResponseSuccess, listSize: number}) => {
-    if (response.next && response.next != listSize) throw new Error(`Expecting list chunk size to be ${listSize}}. Got: ${response.next}`)
-    const total = response.total || 0;
-    return map(range(listSize, total, listSize), (start, idx) => {
-      const req = cloneDeep(request);
-      return set(req, "parameters.start", start);
-    })
   }
 
   const listSequential = async ({ request, listSize }: { request: ApiRequest, listSize: number }) => {
@@ -172,11 +174,25 @@ const useApi = () => {
     return result;
   }
 
+  const listBatched = async ({ request, listSize, batchSize }: { request: ApiRequest, listSize: number, batchSize: number }) => {
+    const listSizeTotal = listSize || config.listSize;
+    const batchSizeTotal = batchSize || config.batchSize;
+    const result: unknown[] = [];
+    set(request, "parameters.start", 0);
+    const response = await call(request);
+    forEach(getListResult(response.result), (item) => result.push(item));
+    const tailed = getTail({ request, response, listSize: listSizeTotal });
+    const batchTailed = await batch({ requests: tailed, batchSize: batchSizeTotal, listMethod: true });
+    forEach(batchTailed, (item) => result.push(...castArray(item)));
+    return result;
+  }
+
   return {
     call,
     batch,
     config,
     buildQuery,
+    listBatched,
     listSequential,
   }
 };

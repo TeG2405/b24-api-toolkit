@@ -115,14 +115,14 @@ export interface Batch {
   (args:{
     requests: ApiRequestWithPayload[],
     batchSize?: number,
-    listSize?: number,
+    listMethod?: boolean,
     withPayload: true,
-  }): Promise<Array<[ResponseSuccess, unknown]>>
+  }): Promise<Array<[ResponseSuccess["result"], unknown]>>
 
   (args: {
     requests: ApiRequest[],
     batchSize?: number,
-    listSize?: number,
+    listMethod?: boolean,
     withPayload?: false,
-  }): Promise<Array<ResponseSuccess>>
+  }): Promise<Array<ResponseSuccess["result"]>>
 }
