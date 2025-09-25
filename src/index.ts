@@ -3,7 +3,17 @@ import { ResponseBatchSchema, ResponseErrorSchema, ResponseSchema } from "./sche
 import client from "./client.ts"
 import buildQuery from "./build-query.ts";
 import config from "./settings.ts";
-import { chunk, clone, compact, difference, isPlainObject, mapValues, range, retry, snakeCase } from "es-toolkit";
+import {
+  chunk,
+  cloneDeep,
+  compact,
+  difference,
+  isPlainObject,
+  mapValues,
+  range,
+  retry,
+  snakeCase
+} from "es-toolkit";
 import {
   map,
   first,
@@ -139,8 +149,8 @@ const useApi = () => {
   const getTail = ({ request, response, listSize }: {request: ApiRequest, response: ResponseSuccess, listSize: number}) => {
     if (response.next && response.next != listSize) throw new Error(`Expecting list chunk size to be ${listSize}}. Got: ${response.next}`)
     const total = response.total || 0;
-    return map(range(listSize, total, listSize), (start) => {
-      const req = clone(request);
+    return map(range(listSize, total, listSize), (start, idx) => {
+      const req = cloneDeep(request);
       return set(req, "parameters.start", start);
     })
   }
@@ -151,8 +161,8 @@ const useApi = () => {
     set(request, "parameters.start", 0);
     const response = await call(request);
     forEach(getListResult(response.result), (item) => result.push(item));
-
     const tailed = getTail({ request, response, listSize: size });
+
     for (const tail of tailed) {
       const res = await call(tail);
       const start = Number(tail.parameters?.start || 0);
@@ -163,10 +173,11 @@ const useApi = () => {
   }
 
   return {
-    batch,
     call,
+    batch,
+    config,
     buildQuery,
-    config
+    listSequential,
   }
 };
 
