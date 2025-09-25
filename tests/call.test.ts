@@ -66,9 +66,9 @@ describe("Call tests", () => {
     });
 
   it("Запрос с ошибкой и ретраем по статусу", async () => {
-    nock(process.env.WEBHOOK_URL || "").post('/profile').reply(CODES.TOO_MANY_REQUESTS, {}).persist();
-    const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const api = useApi();
+    nock(process.env.WEBHOOK_URL || "").post('/profile').times(api.config.retry.attempts).reply(CODES.TOO_MANY_REQUESTS, {});
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
     await expect(async() => await api.call({method: "profile"}))
       .rejects.toThrowError(`Request failed with status code ${CODES.TOO_MANY_REQUESTS}`);
@@ -76,37 +76,37 @@ describe("Call tests", () => {
   }, 30000);
 
   it("Успешный запрос с ошибкой", async () => {
+    const api = useApi();
     nock(process.env.WEBHOOK_URL || "").post('/profile').reply(CODES.OK, {
       error: "ACCESS_DENIED",
       error_description: "Method is blocked due to operation time limit.",
-    }).persist();
+    });
 
-    const api = useApi();
     await expect(async() => await api.call({method: "profile"}))
       .rejects.toThrowError(`ACCESS_DENIED: Method is blocked due to operation time limit.`);
   });
 
   it("Успешный запрос с ошибкой и ретраем по коду ошибки", async () => {
-    nock(process.env.WEBHOOK_URL || "").post('/profile').reply(CODES.OK, {
+    const api = useApi();
+    nock(process.env.WEBHOOK_URL || "").post('/profile').times(api.config.retry.attempts).reply(CODES.OK, {
       error: "OPERATION_TIME_LIMIT",
       error_description: "Method is blocked due to operation time limit.",
-    }).persist();
+    });
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
-    const api = useApi();
     await expect(async() => await api.call({method: "profile"}))
       .rejects.toThrowError(`OPERATION_TIME_LIMIT: Method is blocked due to operation time limit.`);
     expect(fetchSpy).toHaveBeenCalledTimes(api.config.retry.attempts);
   }, 30000);
 
   it("Запрос с ошибкой и ретраем по коду ошибки", async () => {
-    nock(process.env.WEBHOOK_URL || "").post('/profile').reply(CODES.FORBIDDEN, {
+    const api = useApi();
+    nock(process.env.WEBHOOK_URL || "").post('/profile').times(api.config.retry.attempts).reply(CODES.FORBIDDEN, {
       error: "OPERATION_TIME_LIMIT",
       error_description: "Method is blocked due to operation time limit.",
-    }).persist();
+    });
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
-    const api = useApi();
     await expect(async() => await api.call({method: "profile"}))
       .rejects.toThrowError(`OPERATION_TIME_LIMIT: Method is blocked due to operation time limit.`);
     expect(fetchSpy).toHaveBeenCalledTimes(api.config.retry.attempts);
@@ -121,7 +121,7 @@ describe("Call tests", () => {
     nock(process.env.WEBHOOK_URL || "").post('/profile').reply(CODES.OK, {
       result: mockProfile,
       time: mockTime,
-    }).persist();
+    });
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
     const api = useApi();

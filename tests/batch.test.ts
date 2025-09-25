@@ -24,7 +24,7 @@ const mockProfile = {
 };
 const mockLeads  = [{"ID": "38945", "STATUS_ID": "1"}, {"ID": "43595", "STATUS_ID": "1"}];
 
-describe("Call tests", () => {
+describe("Batch tests", () => {
   it("Обычный запрос", async () => {
     const result = [
       mockProfile,
@@ -95,6 +95,7 @@ describe("Call tests", () => {
   }, 30000);
 
   it("Запрос с ошибкой и ретраем", async () => {
+    const api = useApi();
     nock(process.env.WEBHOOK_URL || "").post('/batch', {
       "halt": true,
       "cmd": {
@@ -102,7 +103,7 @@ describe("Call tests", () => {
         "_1": "telephony.externalLine.get",
         "_2": "department.get?ID=1",
       }
-    }).reply(CODES.OK, {
+    }).times(api.config.retry.attempts).reply(CODES.OK, {
       result: {
         result: {
           '_0': mockProfile,
@@ -113,10 +114,9 @@ describe("Call tests", () => {
         result_time: {"_0": mockTime},
       },
       time: mockTime,
-    }).persist();
+    });
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
-    const api = useApi();
     await expect(async() => await api.batch({ requests: [
         {method: "profile"},
         {method: "telephony.externalLine.get"},
@@ -172,7 +172,7 @@ describe("Call tests", () => {
         result_time: {"_0": mockTime, "_1": mockTime, "_2": mockTime},
       },
       time: mockTime,
-    }).persist();
+    });
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
     const api = useApi();
