@@ -1,68 +1,32 @@
-import type { ApiRequest, Batch, ResponseBatch, ResponseError, ResponseSuccess, ResponseType } from "./types.ts";
+import type { ApiRequest, ApiRequestList, Batch, ResponseSuccess, ResponseType } from "./types.ts";
 import { ResponseBatchSchema, ResponseErrorSchema, ResponseSchema } from "./schemas.ts";
 import client from "./client.ts"
 import buildQuery from "./build-query.ts";
 import config from "./settings.ts";
 import {
   chunk,
-  cloneDeep,
   compact,
   difference,
-  isPlainObject,
   mapValues,
-  range,
   retry,
-  snakeCase
 } from "es-toolkit";
 import {
-  map,
   first,
   forEach,
   get,
-  includes,
   isEmpty,
   join,
   keys,
   padStart,
   reduce,
   set,
-  size,
-  some,
   values,
-  castArray
+  castArray,
 } from "es-toolkit/compat";
-import type { KyResponse } from "ky";
+import { useHelpers } from "./helpers/index.ts";
+import { useBatchedNoCount } from "./helpers/batched-no-count.js";
 const useApi = () => {
-
-  const throwError = (error: ResponseError) => {
-    throw new Error(`${error.error}: ${error.error_description || "no description"}`);
-  }
-
-  const isResponseError = (body: ResponseType): body is ResponseError =>
-    ResponseErrorSchema.safeParse(body).success;
-
-  const shouldCallRetry = ({ response, body }: { response: KyResponse, body: ResponseType }) => {
-    if (includes(config.retry.statuses, response.status)) return true;
-    return isResponseError(body) && includes(config.retry.errors, snakeCase(body.error));
-  }
-
-  const shouldBatchRetry = (errors: ResponseBatch['result_error']) => {
-    return some(errors, (item) => {
-      const error = ResponseErrorSchema.parse(item);
-      return includes(config.retry.errors, snakeCase(error.error));
-    });
-  }
-
-  const getListResult = (result: unknown) => {
-    if (!Array.isArray(result) && !isPlainObject(result)) throw new Error(`Expecting 'result' to be a 'list' or a 'dict'. Got: ${result}`);
-    if (Array.isArray(result)) return isEmpty(result) ? [] : result;
-    const clues = keys(result);
-    if (isEmpty(clues)) return [];
-    if (size(clues) !== 1) throw new Error(`If 'result' is a 'dict', expecting single item. Got: ${result}`);
-    const value = get(result, String(first(clues)));
-    if (!Array.isArray(value)) throw new TypeError(`If 'result' is a 'dict', expecting single item to be a 'list'. Got: ${result}`);
-    return value;
-  }
+  const { getTail, getListResult, shouldBatchRetry, shouldCallRetry, throwError, isResponseError } = useHelpers();
 
   const call = async ({ method, parameters, options = {} }: ApiRequest) => {
     const settings = {
@@ -87,15 +51,6 @@ const useApi = () => {
     });
   };
 
-  const getTail = ({ request, response, listSize }: {request: ApiRequest, response: ResponseSuccess, listSize: number}) => {
-    if (response.next && response.next != listSize) throw new Error(`Expecting list chunk size to be ${listSize}}. Got: ${response.next}`)
-    const total = response.total || 0;
-    return map(range(listSize, total, listSize), (start, idx) => {
-      const req = cloneDeep(request);
-      return set(req, "parameters.start", start);
-    })
-  }
-
   //@ts-ignore
   const batch: Batch = async ({ requests, batchSize, listMethod, withPayload }) => {
     const size = batchSize || config.batchSize;
@@ -114,11 +69,13 @@ const useApi = () => {
         halt: true,
         cmd: mapValues(commands, (command) => command.cmd),
       };
+
       let attempt = 0;
       const controller = new AbortController();
 
       const result = await retry(async () => {
         attempt++;
+        // TODO: здесь ошибка, нужно обработать throw из call, иначе будет попадать в ретрай
         const response = await call({ method: "batch", parameters });
         const result = ResponseBatchSchema.parse(response.result);
         const errors = result.result_error;
@@ -148,7 +105,7 @@ const useApi = () => {
           time: get(result.result_time, key),
           total: get(result.result_total, key),
           next: get(result.result_next, key),
-        })
+        });
         const data = listMethod ? getListResult(res.result) : res.result;
         withPayload ? responsesWithPayload.push([data, item.payload]) : responses.push(data)
       })
@@ -187,6 +144,22 @@ const useApi = () => {
     return result;
   }
 
+  const listBatchedNoCount = async ({ request, idKey = "ID", listSize, batchSize }: { request: ApiRequestList, idKey?: string, listSize: number, batchSize: number }) => {
+    const listSizeTotal = listSize || config.listSize;
+    const batchSizeTotal = batchSize || config.batchSize;
+    const result: unknown[] = [];
+    const batchedHelper = useBatchedNoCount({ request, idKey, listSize: listSizeTotal, batchSize: batchSizeTotal });
+    const boundaryRequests = [batchedHelper.headRequest(), batchedHelper.tailRequest()];
+    const [ headResult, tailResult ] = await batch({ requests: boundaryRequests });
+    forEach(getListResult(headResult), (item) => result.push(item));
+
+    const bodyRequests = batchedHelper.bodyRequests({ headResult, tailResult });
+    const bodyResults = await batch({ requests: bodyRequests, batchSize: batchSizeTotal, listMethod: true });
+    forEach(bodyResults, (item) => result.push(...castArray(item)));
+    forEach(batchedHelper.tailResults({headResult, tailResult}), (item) => result.push(item));
+    return result;
+  };
+
   return {
     call,
     batch,
@@ -194,6 +167,7 @@ const useApi = () => {
     buildQuery,
     listBatched,
     listSequential,
+    listBatchedNoCount,
   }
 };
 

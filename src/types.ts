@@ -103,10 +103,15 @@ export type Config = {
 export type ResponseError = z.infer<typeof ResponseErrorSchema>;
 export type ResponseSuccess = z.infer<typeof ResponseSchema>;
 export type ResponseBatch = z.infer<typeof ResponseBatchSchema>;
-
 export type ResponseType = ResponseError | ResponseSuccess;
-
-export type ApiRequest = { method: string, parameters?: ApiRecord, options?: Options }
+export type ApiRequest = { method: string, parameters?: ApiRecord, options?: Options };
+export type ListParameters = {
+  select?: string[];
+  filter?: ApiRecord;
+  order?: string[];
+  start?: number;
+}
+export type ApiRequestList = { method: string, parameters?: ListParameters, options?: Options };
 
 
 export type ApiRequestWithPayload = ApiRequest & { payload: unknown };
