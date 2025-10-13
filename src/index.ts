@@ -1,4 +1,4 @@
-import type { ApiRequest, ApiRequestList, Batch, ResponseSuccess, ResponseType } from "./types.ts";
+import type { ApiRecord, ApiRequest, ApiRequestList, Batch, ResponseSuccess, ResponseType } from "./types.ts";
 import { ResponseBatchSchema, ResponseErrorSchema, ResponseSchema } from "./schemas.ts";
 import client from "./client.ts"
 import buildQuery from "./build-query.ts";
@@ -21,10 +21,11 @@ import {
   reduce,
   set,
   values,
-  castArray,
+  castArray, size, concat, map,
 } from "es-toolkit/compat";
 import { useHelpers } from "./helpers/index.ts";
 import { useBatchedNoCount } from "./helpers/batched-no-count.js";
+import { useReferenceNoCount } from "./helpers/reference-no-count.js";
 const useApi = () => {
   const { getTail, getListResult, shouldBatchRetry, shouldCallRetry, throwError, isResponseError } = useHelpers();
 
@@ -160,6 +161,48 @@ const useApi = () => {
     return result;
   };
 
+  const updatesBatch = async ({ bodyRequests, headRequests, referenceHelper }: { bodyRequests: ApiRequestList[], headRequests: ApiRequestList[], referenceHelper: ReturnType<typeof useReferenceNoCount> }) => {
+    //TODO: Возможно ошибка из за массива массивов
+    const result = await batch({ requests: concat(headRequests, bodyRequests), batchSize: referenceHelper.batchSize, listMethod: true, withPayload: referenceHelper.withPayload });
+    // console.log(bodyRequests, result, "result")
+    return {
+      bodyResults: result,
+      headRequests: referenceHelper.headRequests({ bodyRequests: concat(headRequests, bodyRequests), bodyResults: result }),
+    }
+  };
+
+  const referenceBatchedNoCount = async ({ request, updates, idKey = "ID", listSize, batchSize, withPayload = false }: { request: ApiRequestList, updates: Array<ApiRecord>, idKey?: string, listSize: number, batchSize: number, withPayload?: boolean }) => {
+    const listSizeTotal = listSize || config.listSize;
+    const batchSizeTotal = batchSize || config.batchSize;
+    const result: unknown[] = [];
+    const referenceHelper = useReferenceNoCount({ request, updates, idKey, listSize: listSizeTotal, batchSize: batchSizeTotal, withPayload });
+    let headRequests: ApiRequestList[] = [];
+    let bodyRequests: ApiRequestList[] = [];
+    for (const tailRequest of referenceHelper.tailRequests()) {
+      bodyRequests.push(tailRequest);
+      // console.log(map(bodyRequests, "parameters"), 'size')
+      if (size(headRequests) + size(bodyRequests) < batchSizeTotal) {
+        continue
+      }
+      const updates = await updatesBatch({ bodyRequests, headRequests, referenceHelper });
+      // console.log(map(bodyRequests, "parameters"), "bodyRequests");
+      bodyRequests = [];
+      headRequests = updates.headRequests;
+      // console.log(map(headRequests, "parameters"), "headRequests");
+      // console.log(updates.bodyResults, "bodyResults");
+      forEach(referenceHelper.bodyResults(updates.bodyResults), (item) => result.push(item));
+    }
+    while (!isEmpty(headRequests) || !isEmpty(bodyRequests)) {
+      // console.log(map(bodyRequests, "parameters"), "bodyRequests 2");
+      const updates = await updatesBatch({ bodyRequests, headRequests, referenceHelper });
+      bodyRequests = [];
+      headRequests = updates.headRequests;
+      // console.log(map(headRequests, "parameters"), "headRequests 2");
+      forEach(referenceHelper.bodyResults(updates.bodyResults), (item) => result.push(item));
+    }
+    return result;
+  }
+
   return {
     call,
     batch,
@@ -168,6 +211,7 @@ const useApi = () => {
     listBatched,
     listSequential,
     listBatchedNoCount,
+    referenceBatchedNoCount,
   }
 };
 

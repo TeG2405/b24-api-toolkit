@@ -42,7 +42,7 @@ describe("batched no count tests", () => {
       forEach(commands, (command, key) => {
         const [ method, query ] = command.split("?");
         const params = parse(query!);
-        const isReverse = isEqual(get(params, "order.ID"), "DESC")  ;
+        const isReverse = isEqual(get(params, "order.ID"), "DESC");
         const fromId = Number(get(params, "filter[>ID]", -1));
         if (size(castArray(fromId)) !== 1) return [400, { error: 'invalid filter' }];
         const toId = Number(get(params, "filter[<ID]", total));

@@ -11,6 +11,13 @@ const client = ky.extend({
     statusCodes: settings.retry.statuses,
     methods: settings.retry.methods,
   },
+  hooks: {
+    afterResponse: [
+      async (request, options, response) => {
+      // console.log((await response.json()).result.result, 'response')
+      }
+    ]
+  },
 });
 
 export default client;
