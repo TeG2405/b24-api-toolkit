@@ -1,4 +1,11 @@
-import type { ApiRecord, ApiRequest, ApiRequestList, Batch, ResponseSuccess, ResponseType } from "./types.ts";
+import type {
+  ApiRecord,
+  ApiRequest,
+  ApiRequestList,
+  Batch,
+  ResponseSuccess,
+  ResponseType
+} from "./types.ts";
 import { ResponseBatchSchema, ResponseErrorSchema, ResponseSchema } from "./schemas.ts";
 import client from "./client.ts"
 import buildQuery from "./build-query.ts";
@@ -162,16 +169,14 @@ const useApi = () => {
   };
 
   const updatesBatch = async ({ bodyRequests, headRequests, referenceHelper }: { bodyRequests: ApiRequestList[], headRequests: ApiRequestList[], referenceHelper: ReturnType<typeof useReferenceNoCount> }) => {
-    //TODO: Возможно ошибка из за массива массивов
     const result = await batch({ requests: concat(headRequests, bodyRequests), batchSize: referenceHelper.batchSize, listMethod: true, withPayload: referenceHelper.withPayload });
-    // console.log(bodyRequests, result, "result")
     return {
       bodyResults: result,
       headRequests: referenceHelper.headRequests({ bodyRequests: concat(headRequests, bodyRequests), bodyResults: result }),
     }
   };
 
-  const referenceBatchedNoCount = async ({ request, updates, idKey = "ID", listSize, batchSize, withPayload = false }: { request: ApiRequestList, updates: Array<ApiRecord>, idKey?: string, listSize: number, batchSize: number, withPayload?: boolean }) => {
+  const referenceBatchedNoCount = async ({ request, updates, idKey = "ID", listSize, batchSize, withPayload = false }: { request: ApiRequestList, updates: Array<{filter: ApiRecord, payload?: unknown}>, idKey?: string, listSize: number, batchSize: number, withPayload?: boolean }) => {
     const listSizeTotal = listSize || config.listSize;
     const batchSizeTotal = batchSize || config.batchSize;
     const result: unknown[] = [];
@@ -180,24 +185,18 @@ const useApi = () => {
     let bodyRequests: ApiRequestList[] = [];
     for (const tailRequest of referenceHelper.tailRequests()) {
       bodyRequests.push(tailRequest);
-      // console.log(map(bodyRequests, "parameters"), 'size')
       if (size(headRequests) + size(bodyRequests) < batchSizeTotal) {
         continue
       }
       const updates = await updatesBatch({ bodyRequests, headRequests, referenceHelper });
-      // console.log(map(bodyRequests, "parameters"), "bodyRequests");
       bodyRequests = [];
       headRequests = updates.headRequests;
-      // console.log(map(headRequests, "parameters"), "headRequests");
-      // console.log(updates.bodyResults, "bodyResults");
       forEach(referenceHelper.bodyResults(updates.bodyResults), (item) => result.push(item));
     }
     while (!isEmpty(headRequests) || !isEmpty(bodyRequests)) {
-      // console.log(map(bodyRequests, "parameters"), "bodyRequests 2");
       const updates = await updatesBatch({ bodyRequests, headRequests, referenceHelper });
       bodyRequests = [];
       headRequests = updates.headRequests;
-      // console.log(map(headRequests, "parameters"), "headRequests 2");
       forEach(referenceHelper.bodyResults(updates.bodyResults), (item) => result.push(item));
     }
     return result;

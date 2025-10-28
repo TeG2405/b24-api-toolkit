@@ -131,3 +131,23 @@ export interface Batch {
     withPayload?: false,
   }): Promise<Array<ResponseSuccess["result"]>>
 }
+
+export interface ReferenceBatchNoCount {
+  (args: {
+    request: ApiRequestList,
+    updates: Array<{filter: ApiRecord, payload?: unknown}>,
+    idKey?: string,
+    listSize: number,
+    batchSize: number,
+    withPayload: true
+  }): Promise<Array<[ResponseSuccess["result"], unknown]>>
+
+  (args: {
+    request: ApiRequestList,
+    updates: Array<{filter: ApiRecord, payload?: unknown}>,
+    idKey?: string,
+    listSize: number,
+    batchSize: number,
+    withPayload?: boolean
+  }): Promise<Array<ResponseSuccess["result"]>>
+}

@@ -1,9 +1,9 @@
-import type { ApiRecord, ApiRequestList } from "../types.js";
+import type { ApiRecord, ApiRequestList, ReferenceBatchNoCount } from "../types.js";
 import { useHelpers } from "./index.js";
 import { forEach, get, has, map, max, set, size } from "es-toolkit/compat";
-import { cloneDeep, compact, flatten, merge, zip } from "es-toolkit";
+import { cloneDeep, compact, flatten, isNotNil, merge, zip } from "es-toolkit";
 
-const useReferenceNoCount = ({ request, updates, idKey, listSize, batchSize, withPayload }: { request: ApiRequestList, updates: Array<ApiRecord>, idKey: string, listSize: number, batchSize: number, withPayload: boolean }) => {
+const useReferenceNoCount = ({ request, updates, idKey, listSize, batchSize, withPayload }: { request: ApiRequestList, updates: Array<{filter: ApiRecord, payload?: unknown}>, idKey: string, listSize: number, batchSize: number, withPayload: boolean }) => {
   const filter = get(request, "parameters.filter");
   if (request.parameters && request.parameters.order) throw new Error("Ordering parameters are reserved in `referenceBatchedNoCount` method.");
   const idFrom = `>${idKey}`;
@@ -12,26 +12,29 @@ const useReferenceNoCount = ({ request, updates, idKey, listSize, batchSize, wit
 
   const tailRequests = () => {
     return map(updates, (item) => {
-      if (has(item, idFrom)) throw new Error(`Filter parameters ${idFrom} is reserved in "referenceBatchedNoCount" method.`);
+      if (has(item.filter, idFrom)) throw new Error(`Filter parameters ${idFrom} is reserved in "referenceBatchedNoCount" method.`);
       const cloneRequest = cloneDeep(request);
-      set(cloneRequest, "parameters.filter", merge(get(cloneRequest, "parameters.filter", {}), item));
+      set(cloneRequest, "parameters.filter", merge(get(cloneRequest, "parameters.filter", {}), item.filter));
       set(cloneRequest, "parameters.start", -1);
       set(cloneRequest, "parameters.order", { "ID": "ASC" });
+      if (isNotNil(item.payload)) set(cloneRequest, "payload", item.payload);
       return cloneRequest;
     })
   };
 
-  const headRequests = ({ bodyRequests, bodyResults }: { bodyRequests: ApiRequestList[], bodyResults: unknown[]}) => {
+  const headRequests = ({ bodyRequests, bodyResults }: { bodyRequests: ApiRequestList[], bodyResults: unknown[] | [unknown[], unknown[]]}) => {
     const result: ApiRequestList[] = [];
-    // if (size(bodyRequests) !== size(bodyResults)) throw new Error(`Expecting body requests and results to be the same size. Got: ${size(bodyRequests)} requests and ${size(bodyResults)} results.`);
     forEach(zip(bodyRequests, bodyResults), ([ bodyRequest, bodyResult ]) => {
+      let payload;
+      if (withPayload) {
+        [ bodyResult, payload ] = bodyResult
+      }
       if (size(bodyResult) === listSize ) {
-        // console.log(bodyResult, 'body result')
         const maxId = max(map(map(bodyResult, idKey), (item) => Number(item)));
         const headRequest = cloneDeep(bodyRequest);
         set(headRequest, ["parameters", "filter", idFrom], maxId);
         // TODO: headRequest иногда undefined непонятно почему, продебажить
-        // console.log(headRequest, 'headRequest');
+        if (isNotNil(payload)) set(headRequest, "payload", payload);
         result.push(headRequest);
       }
     });
@@ -39,6 +42,7 @@ const useReferenceNoCount = ({ request, updates, idKey, listSize, batchSize, wit
   };
 
   const bodyResults = (results: unknown[]) => {
+    if (withPayload) return results;
     return flatten(results);
   };
 
