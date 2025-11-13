@@ -1,7 +1,15 @@
 import { describe, it, expect } from "vitest";
 import useApi from "./../src/index.ts";
 import nock from "nock";
-import { chunk, mapValues, range, sortBy, unzip, zip, zipWith } from "es-toolkit";
+import {
+  chunk,
+  mapValues,
+  range,
+  sortBy,
+  unzip,
+  zip,
+  zipWith,
+} from "es-toolkit";
 import {
   castArray,
   forEach,
@@ -14,16 +22,15 @@ import {
 import { parse } from "qs";
 
 const mockTime = {
-  "start": 1741699660.029826,
-  "finish": 1741699660.111687,
-  "duration": 0.08186101913452148,
-  "processing": 0.0500180721282959,
-  "date_start": "2025-03-11T16:27:40+03:00",
-  "date_finish": "2025-03-11T16:27:40+03:00",
-  "operating_reset_at": 1741700260,
-  "operating": 1.8415930271148682,
+  start: 1741699660.029826,
+  finish: 1741699660.111687,
+  duration: 0.08186101913452148,
+  processing: 0.0500180721282959,
+  date_start: "2025-03-11T16:27:40+03:00",
+  date_finish: "2025-03-11T16:27:40+03:00",
+  operating_reset_at: 1741700260,
+  operating: 1.8415930271148682,
 };
-
 
 describe("Reference batched no count tests", () => {
   it.each([
@@ -31,64 +38,82 @@ describe("Reference batched no count tests", () => {
     { total: 155, listSize: 50, batch: 1 },
     { total: 10, listSize: 50, batch: 50 },
     { total: 20, listSize: 20, batch: 20 },
-  ])
-  ("Reference batched total: $total, listSize: listSize, batch: $batch", async ({ total, listSize, batch }) => {
-    let result = [];
-    for (const i of range(total)) {
-      for (const j of range(total - 1)) {
-        result.push({"ID": i + j * total, "ENTITY_TYPE": "deal", "ENTITY_ID": j})
+  ])(
+    "Reference batched total: $total, listSize: listSize, batch: $batch",
+    async ({ total, listSize, batch }) => {
+      let result = [];
+      for (const i of range(total)) {
+        for (const j of range(total - 1)) {
+          result.push({ ID: i + j * total, ENTITY_TYPE: "deal", ENTITY_ID: j });
+        }
       }
-    }
-    result = sortBy(result, ["ID"])
+      result = sortBy(result, ["ID"]);
 
-    nock(process.env.WEBHOOK_URL || "").post('/batch').reply((_, body, cb) => {
-      const commands: Record<string, string> = get(body, "cmd", {});
-      const output = {};
-      forEach(commands, (command, key) => {
-        const [ method, query ] = command.split("?");
-        const params = parse(query!);
-        const entityId = Number(get(params, "filter[=ENTITY_ID]", -1));
-        const fromId = Number(get(params, "filter[>ID]", -1));
-        if (size(castArray(fromId)) !== 1) return [400, { error: 'invalid filter' }];
+      nock(process.env.WEBHOOK_URL || "")
+        .post("/batch")
+        .reply((_, body, cb) => {
+          const commands: Record<string, string> = get(body, "cmd", {});
+          const output = {};
+          forEach(commands, (command, key) => {
+            const [method, query] = command.split("?");
+            const params = parse(query!);
+            const entityId = Number(get(params, "filter[=ENTITY_ID]", -1));
+            const fromId = Number(get(params, "filter[>ID]", -1));
+            if (size(castArray(fromId)) !== 1)
+              return [400, { error: "invalid filter" }];
 
-        const data = reduce(result, (acc, item) => {
-          if (item["ENTITY_ID"] === entityId && item["ID"] > fromId) {acc.push(item)}
-          return acc
-        }, [] as typeof result)
+            const data = reduce(
+              result,
+              (acc, item) => {
+                if (item["ENTITY_ID"] === entityId && item["ID"] > fromId) {
+                  acc.push(item);
+                }
+                return acc;
+              },
+              [] as typeof result,
+            );
 
-        const cut = slice(data, 0, listSize);
-        if (entityId === 1 || entityId === 0) {
-        }
-        set(output, key, cut);
-      });
-      cb(null, [200, {
-        result: {
-          result: output,
-          result_error: [],
-          result_total: [],
-          result_next: [],
-          result_time: mapValues(output, () => mockTime),
+            const cut = slice(data, 0, listSize);
+            if (entityId === 1 || entityId === 0) {
+            }
+            set(output, key, cut);
+          });
+          cb(null, [
+            200,
+            {
+              result: {
+                result: output,
+                result_error: [],
+                result_total: [],
+                result_next: [],
+                result_time: mapValues(output, () => mockTime),
+              },
+              time: mockTime,
+            },
+          ]);
+        })
+        .persist();
+
+      const api = useApi();
+      const res = await api.referenceBatchedNoCount({
+        request: {
+          method: "crm.timeline.comment.list",
+          parameters: {
+            select: ["ID", "ENTITY_ID"],
+            filter: { "=ENTITY_TYPE": "deal" },
+          },
         },
-        time: mockTime,
-      }])
-    }).persist();
-
-    const api = useApi();
-    const res = await api.referenceBatchedNoCount({
-      request: { method: "crm.timeline.comment.list",
-      parameters: {
-        select: ["ID", "ENTITY_ID"],
-        filter: {"=ENTITY_TYPE": "deal"},
-        }
-      },
-      updates: Array.from(Array(total), (_, idx) => ({filter: { "=ENTITY_ID": idx }})),
-      listSize: listSize,
-      batchSize: batch,
-    });
-    expect(sortBy(res, ["ID"])).toEqual(result);
-    nock.cleanAll();
-  }, 30000)
-
+        updates: Array.from(Array(total), (_, idx) => ({
+          filter: { "=ENTITY_ID": idx },
+        })),
+        listSize: listSize,
+        batchSize: batch,
+      });
+      expect(sortBy(res, ["ID"])).toEqual(result);
+      nock.cleanAll();
+    },
+    30000,
+  );
 
   // TODO: похоже ошибка происходит из значения total. При total = 10 все ок, но если больше, то ломается
   it.each([
@@ -96,62 +121,86 @@ describe("Reference batched no count tests", () => {
     { total: 10, listSize: 50, batch: 50 },
     { total: 20, listSize: 20, batch: 20 },
     { total: 155, listSize: 50, batch: 1 },
-  ])
-  ("Reference batched with payload total: $total, listSize: listSize, batch: $batch", async ({ total, listSize, batch }) => {
-    let result = [];
-    for (const i of range(total)) {
-      for (const j of range(total - 1)) {
-        result.push({"ID": i + j * total, "ENTITY_TYPE": "deal", "ENTITY_ID": j})
+  ])(
+    "Reference batched with payload total: $total, listSize: listSize, batch: $batch",
+    async ({ total, listSize, batch }) => {
+      let result = [];
+      for (const i of range(total)) {
+        for (const j of range(total - 1)) {
+          result.push({ ID: i + j * total, ENTITY_TYPE: "deal", ENTITY_ID: j });
+        }
       }
-    }
-    result = sortBy(result, ["ID"])
+      result = sortBy(result, ["ID"]);
 
-    nock(process.env.WEBHOOK_URL || "").post('/batch').reply((_, body, cb) => {
-      const commands: Record<string, string> = get(body, "cmd", {});
-      const output = {};
-      forEach(commands, (command, key) => {
-        const [ method, query ] = command.split("?");
-        const params = parse(query!);
-        const entityId = Number(get(params, "filter[=ENTITY_ID]", -1));
-        const fromId = Number(get(params, "filter[>ID]", -1));
-        if (size(castArray(fromId)) !== 1) return [400, { error: 'invalid filter' }];
+      nock(process.env.WEBHOOK_URL || "")
+        .post("/batch")
+        .reply((_, body, cb) => {
+          const commands: Record<string, string> = get(body, "cmd", {});
+          const output = {};
+          forEach(commands, (command, key) => {
+            const [method, query] = command.split("?");
+            const params = parse(query!);
+            const entityId = Number(get(params, "filter[=ENTITY_ID]", -1));
+            const fromId = Number(get(params, "filter[>ID]", -1));
+            if (size(castArray(fromId)) !== 1)
+              return [400, { error: "invalid filter" }];
 
-        const data = reduce(result, (acc, item) => {
-          if (item["ENTITY_ID"] === entityId && item["ID"] > fromId) {acc.push(item)}
-          return acc
-        }, [] as typeof result)
+            const data = reduce(
+              result,
+              (acc, item) => {
+                if (item["ENTITY_ID"] === entityId && item["ID"] > fromId) {
+                  acc.push(item);
+                }
+                return acc;
+              },
+              [] as typeof result,
+            );
 
-        set(output, key, slice(data, 0, listSize));
+            set(output, key, slice(data, 0, listSize));
+          });
+          cb(null, [
+            200,
+            {
+              result: {
+                result: output,
+                result_error: [],
+                result_total: [],
+                result_next: [],
+                result_time: mapValues(output, () => mockTime),
+              },
+              time: mockTime,
+            },
+          ]);
+        })
+        .persist();
+
+      const api = useApi();
+
+      const res = await api.referenceBatchedNoCount({
+        request: {
+          method: "crm.timeline.comment.list",
+          parameters: {
+            select: ["ID", "ENTITY_ID"],
+            filter: { "=ENTITY_TYPE": "deal" },
+          },
+        },
+        updates: Array.from(Array(total), (_, idx) => ({
+          filter: { "=ENTITY_ID": idx },
+          payload: idx,
+        })),
+        listSize: listSize,
+        batchSize: batch,
+        withPayload: true,
       });
-      cb(null, [200, {
-        result: {
-          result: output,
-          result_error: [],
-          result_total: [],
-          result_next: [],
-          result_time: mapValues(output, () => mockTime),
-        },
-        time: mockTime,
-      }])
-    }).persist();
-
-    const api = useApi();
-
-    const res = await api.referenceBatchedNoCount({
-      request: { method: "crm.timeline.comment.list",
-        parameters: {
-          select: ["ID", "ENTITY_ID"],
-          filter: {"=ENTITY_TYPE": "deal"},
-        },
-      },
-      updates: Array.from(Array(total), (_, idx) => ({filter: {"=ENTITY_ID": idx}, payload: idx})),
-      listSize: listSize,
-      batchSize: batch,
-      withPayload: true,
-    });
-    const chunked = chunk(result, total);
-    const test = zipWith(chunked, Array.from(Array(total), (_, idx) => idx), (a, b) => [a || [], b]);
-    expect(test).toEqual(res);
-    nock.cleanAll();
-  }, 30000)
+      const chunked = chunk(result, total);
+      const test = zipWith(
+        chunked,
+        Array.from(Array(total), (_, idx) => idx),
+        (a, b) => [a || [], b],
+      );
+      expect(test).toEqual(res);
+      nock.cleanAll();
+    },
+    30000,
+  );
 });

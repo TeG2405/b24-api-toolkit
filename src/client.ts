@@ -1,4 +1,4 @@
-import ky from 'ky';
+import ky from "ky";
 import settings from "./settings.ts";
 
 const client = ky.extend({
@@ -10,7 +10,7 @@ const client = ky.extend({
     limit: settings.retry.attempts,
     statusCodes: settings.retry.statuses,
     methods: settings.retry.methods,
-  }
+  },
 });
 
 export default client;

@@ -1,17 +1,15 @@
-import dotenv from 'dotenv'
+import dotenv from "dotenv";
 import { CODES, type Config } from "./types.ts";
 
-dotenv.config({ path: '../.env.local' })
-
-
+dotenv.config({ path: "../.env.local" });
 
 const config: Config = {
-  webhookUrl: process.env.WEBHOOK_URL || '',
+  webhookUrl: process.env.WEBHOOK_URL || "",
   loggerName: "b24api",
   httpTimeout: 30000,
   retry: {
     attempts: 5,
-    delay: (attempts) => 0.5 * (2 ** (attempts - 1)) * 1000,
+    delay: (attempts) => 0.5 * 2 ** (attempts - 1) * 1000,
     backoff: 2,
     errors: ["query_limit_exceeded", "operation_time_limit"],
     statuses: [
@@ -23,10 +21,19 @@ const config: Config = {
       CODES.INSUFFICIENT_STORAGE,
       CODES.INTERNAL_SERVER_ERROR,
     ],
-    methods: ['get', 'post', 'put', 'delete', 'patch', 'head', 'options', 'trace'],
+    methods: [
+      "get",
+      "post",
+      "put",
+      "delete",
+      "patch",
+      "head",
+      "options",
+      "trace",
+    ],
   },
   listSize: 50,
   batchSize: 50,
-}
+};
 
 export default config;

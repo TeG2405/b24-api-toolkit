@@ -1,5 +1,9 @@
 import type { Options } from "ky";
-import type { ResponseBatchSchema, ResponseErrorSchema, ResponseSchema } from "./schemas.ts";
+import type {
+  ResponseBatchSchema,
+  ResponseErrorSchema,
+  ResponseSchema,
+} from "./schemas.ts";
 import type * as z from "zod";
 
 export enum CODES {
@@ -73,7 +77,7 @@ export enum CODES {
   INSUFFICIENT_STORAGE = 507,
   LOOP_DETECTED = 508,
   NOT_EXTENDED = 510,
-  NETWORK_AUTHENTICATION_REQUIRED = 511
+  NETWORK_AUTHENTICATION_REQUIRED = 511,
 }
 
 export type ApiPrimitive = boolean | string | number | null | Date;
@@ -98,56 +102,63 @@ export type Config = {
   };
   listSize: number;
   batchSize: number;
-}
+};
 
 export type ResponseError = z.infer<typeof ResponseErrorSchema>;
 export type ResponseSuccess = z.infer<typeof ResponseSchema>;
 export type ResponseBatch = z.infer<typeof ResponseBatchSchema>;
 export type ResponseType = ResponseError | ResponseSuccess;
-export type ApiRequest = { method: string, parameters?: ApiRecord, options?: Options };
+export type ApiRequest = {
+  method: string;
+  parameters?: ApiRecord;
+  options?: Options;
+};
 export type ListParameters = {
   select?: string[];
   filter?: ApiRecord;
   order?: string[];
   start?: number;
-}
-export type ApiRequestList = { method: string, parameters?: ListParameters, options?: Options };
-
+};
+export type ApiRequestList = {
+  method: string;
+  parameters?: ListParameters;
+  options?: Options;
+};
 
 export type ApiRequestWithPayload = ApiRequest & { payload: unknown };
 
 export interface Batch {
-  (args:{
-    requests: ApiRequestWithPayload[],
-    batchSize?: number,
-    listMethod?: boolean,
-    withPayload: true,
-  }): Promise<Array<[ResponseSuccess["result"], unknown]>>
+  (args: {
+    requests: ApiRequestWithPayload[];
+    batchSize?: number;
+    listMethod?: boolean;
+    withPayload: true;
+  }): Promise<Array<[ResponseSuccess["result"], unknown]>>;
 
   (args: {
-    requests: ApiRequest[],
-    batchSize?: number,
-    listMethod?: boolean,
-    withPayload?: false,
-  }): Promise<Array<ResponseSuccess["result"]>>
+    requests: ApiRequest[];
+    batchSize?: number;
+    listMethod?: boolean;
+    withPayload?: false;
+  }): Promise<Array<ResponseSuccess["result"]>>;
 }
 
 export interface ReferenceBatchNoCount {
   (args: {
-    request: ApiRequestList,
-    updates: Array<{filter: ApiRecord, payload?: unknown}>,
-    idKey?: string,
-    listSize: number,
-    batchSize: number,
-    withPayload: true
-  }): Promise<Array<[ResponseSuccess["result"], unknown]>>
+    request: ApiRequestList;
+    updates: Array<{ filter: ApiRecord; payload?: unknown }>;
+    idKey?: string;
+    listSize: number;
+    batchSize: number;
+    withPayload: true;
+  }): Promise<Array<[ResponseSuccess["result"], unknown]>>;
 
   (args: {
-    request: ApiRequestList,
-    updates: Array<{filter: ApiRecord, payload?: unknown}>,
-    idKey?: string,
-    listSize: number,
-    batchSize: number,
-    withPayload?: boolean
-  }): Promise<Array<ResponseSuccess["result"]>>
+    request: ApiRequestList;
+    updates: Array<{ filter: ApiRecord; payload?: unknown }>;
+    idKey?: string;
+    listSize: number;
+    batchSize: number;
+    withPayload?: boolean;
+  }): Promise<Array<ResponseSuccess["result"]>>;
 }

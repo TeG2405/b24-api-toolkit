@@ -1,4 +1,6 @@
 import tseslint from 'typescript-eslint';
+import prettier from 'eslint-plugin-prettier';
+import eslintConfigPrettier from 'eslint-config-prettier';
 
 export default [
   {
@@ -12,16 +14,28 @@ export default [
     },
     plugins: {
       '@typescript-eslint': tseslint.plugin,
+      prettier,
     },
     rules: {
-      // Базовые рекомендации
       ...tseslint.configs.recommended.rules,
 
-      // Примеры часто полезных правил
+      // TypeScript
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-      '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/consistent-type-imports': 'error',
+
+      // Prettier (всегда в конце)
+      ...eslintConfigPrettier.rules,
+      'prettier/prettier': [
+        'error',
+        {
+          singleQuote: false,
+          semi: true,
+          trailingComma: 'all',
+          tabWidth: 2,
+          endOfLine: 'lf',
+        },
+      ],
     },
   },
 ];
