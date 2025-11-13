@@ -1,9 +1,4 @@
-import type {
-  ApiRecord,
-  ApiRequestList,
-  ReferenceBatchNoCount,
-} from "../types.js";
-import { useHelpers } from "./index.js";
+import type { ApiRecord, ApiRequestList } from "../types.js";
 import { forEach, get, has, map, max, set, size } from "es-toolkit/compat";
 import { cloneDeep, compact, flatten, isNotNil, merge, zip } from "es-toolkit";
 
@@ -28,7 +23,6 @@ const useReferenceNoCount = ({
       "Ordering parameters are reserved in `referenceBatchedNoCount` method.",
     );
   const idFrom = `>${idKey}`;
-  const idTo = `<${idKey}`;
   if (filter && has(filter, idFrom))
     throw new Error(
       `Filter parameter "${idFrom}" is reserved in "referenceBatchedNoCount" method.`,
