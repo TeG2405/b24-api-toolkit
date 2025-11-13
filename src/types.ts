@@ -1,6 +1,6 @@
 import type { Options } from "ky";
-import { ResponseBatchSchema, ResponseErrorSchema, ResponseSchema } from "./schemas.ts";
-import * as z from "zod";
+import type { ResponseBatchSchema, ResponseErrorSchema, ResponseSchema } from "./schemas.ts";
+import type * as z from "zod";
 
 export enum CODES {
   // 1xx Informational
