@@ -1,17 +1,9 @@
 {
-  "name": "b24api",
+  "name": "@intervolga/b24api",
   "version": "1.0.0",
-  "description": "",
+  "description": "Клиент для работы с bitrix24 API",
   "homepage": "https://github.com/bubblesortt/b24api#readme",
-  "bugs": {
-    "url": "https://github.com/bubblesortt/b24api/issues"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/bubblesortt/b24api.git"
-  },
   "license": "ISC",
-  "author": "Alexandr Bychkin",
   "type": "module",
   "main": "index.js",
   "directories": {
