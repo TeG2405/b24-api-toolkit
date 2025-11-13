@@ -23,8 +23,8 @@
     "forceConsistentCasingInFileNames": true,
 
     /* === Для удобства разработки === */
-    "sourceMap": true                       // Генерировать .map файлы
+    "sourceMap": false                       // Генерировать .map файлы
   },
-  "include": ["src"],
+  "files": ["src/index.ts"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"]
 }

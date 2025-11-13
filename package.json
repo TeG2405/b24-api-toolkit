@@ -12,7 +12,7 @@
   "scripts": {
     "test": "vitest --run",
     "dev:test": "vitest",
-    "tsc": "tsc --noEmit",
+    "build": "tsc",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write ."
