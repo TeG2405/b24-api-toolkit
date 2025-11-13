@@ -1,35 +1,10 @@
-import type {
-  ApiRecord,
-  ApiRequest,
-  ApiRequestList,
-  Batch,
-  ResponseSuccess,
-  ResponseType
-} from "./types.ts";
+import type { ApiRecord, ApiRequest, ApiRequestList, Batch, ResponseSuccess, ResponseType } from "./types.ts";
 import { ResponseBatchSchema, ResponseErrorSchema, ResponseSchema } from "./schemas.ts";
 import client from "./client.ts"
 import buildQuery from "./build-query.ts";
 import config from "./settings.ts";
-import {
-  chunk,
-  compact,
-  difference,
-  mapValues,
-  retry,
-} from "es-toolkit";
-import {
-  first,
-  forEach,
-  get,
-  isEmpty,
-  join,
-  keys,
-  padStart,
-  reduce,
-  set,
-  values,
-  castArray, size, concat, map,
-} from "es-toolkit/compat";
+import { chunk, compact, difference, mapValues, retry } from "es-toolkit";
+import { first, forEach, get, isEmpty, join, keys, padStart, reduce, set, values, castArray, size, concat } from "es-toolkit/compat";
 import { useHelpers } from "./helpers/index.ts";
 import { useBatchedNoCount } from "./helpers/batched-no-count.js";
 import { useReferenceNoCount } from "./helpers/reference-no-count.js";
@@ -37,10 +12,7 @@ const useApi = () => {
   const { getTail, getListResult, shouldBatchRetry, shouldCallRetry, throwError, isResponseError } = useHelpers();
 
   const call = async ({ method, parameters, options = {} }: ApiRequest) => {
-    const settings = {
-      json: parameters,
-      ...options
-    };
+    const settings = { json: parameters, ...options };
     const controller = new AbortController();
     let attempt = 0;
     return await retry(async () => {
