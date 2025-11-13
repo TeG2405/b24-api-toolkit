@@ -170,7 +170,7 @@ const useApi = () => {
       requests: concat(headRequests, bodyRequests),
       batchSize: referenceHelper.batchSize,
       listMethod: true,
-      withPayload: referenceHelper.withPayload,
+      withPayload: referenceHelper.withPayload as false | undefined,
     });
     return {
       bodyResults: result,

@@ -39,10 +39,10 @@ const useReferenceNoCount = ({
     forEach(zip(bodyRequests, bodyResults), ([bodyRequest, bodyResult]) => {
       let payload;
       if (withPayload) {
-        [bodyResult, payload] = bodyResult;
+        [bodyResult, payload] = bodyResult as unknown[];
       }
-      if (size(bodyResult) === listSize) {
-        const maxId = max(map(map(bodyResult, idKey), (item) => Number(item)));
+      if (size(bodyResult as unknown[]) === listSize) {
+        const maxId = max(map(map(bodyResult as unknown[], idKey), (item) => Number(item)));
         const headRequest = cloneDeep(bodyRequest);
         set(headRequest, ["parameters", "filter", idFrom], maxId);
         // TODO: headRequest иногда undefined непонятно почему, продебажить
