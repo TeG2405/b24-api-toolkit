@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import buildQuery from "./../src/build-query.ts";
+import buildQuery from "./../src/build-query";
 
 describe("buildQuery", () => {
   it('Кодирует плоские пары и пробелы как "+"', () => {

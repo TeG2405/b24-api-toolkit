@@ -1,13 +1,13 @@
-import type { ApiRecord, ApiRequest, ApiRequestList, Batch, ResponseSuccess, ResponseType } from "./types.ts";
-import { ResponseBatchSchema, ResponseErrorSchema, ResponseSchema } from "./schemas.ts";
-import client from "./client.ts";
-import buildQuery from "./build-query.ts";
-import config from "./settings.ts";
+import type { ApiRecord, ApiRequest, ApiRequestList, Batch, ResponseSuccess, ResponseType } from "./types";
+import { ResponseBatchSchema, ResponseErrorSchema, ResponseSchema } from "./schemas";
+import client from "./client";
+import buildQuery from "./build-query";
+import config from "./settings";
 import { chunk, compact, difference, mapValues, retry } from "es-toolkit";
 import { first, forEach, get, isEmpty, join, keys, padStart, reduce, set, values, castArray, size, concat } from "es-toolkit/compat";
-import { useHelpers } from "./helpers/index.ts";
-import { useBatchedNoCount } from "./helpers/batched-no-count.js";
-import { useReferenceNoCount } from "./helpers/reference-no-count.js";
+import { useHelpers } from "./helpers";
+import { useBatchedNoCount } from "./helpers/batched-no-count";
+import { useReferenceNoCount } from "./helpers/reference-no-count";
 const useApi = () => {
   const { getTail, getListResult, shouldBatchRetry, shouldCallRetry, throwError, isResponseError } = useHelpers();
 

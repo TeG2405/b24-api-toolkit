@@ -1,7 +1,7 @@
-import type { ApiRequest, ResponseBatch, ResponseError, ResponseSuccess, ResponseType } from "../types.js";
+import type { ApiRequest, ResponseBatch, ResponseError, ResponseSuccess, ResponseType } from "../types";
 import { cloneDeep, isPlainObject, range, snakeCase } from "es-toolkit";
-import config from "../settings.js";
-import { ResponseErrorSchema } from "../schemas.js";
+import config from "../settings";
+import { ResponseErrorSchema } from "../schemas";
 import { first, get, includes, isEmpty, keys, map, set, size, some } from "es-toolkit/compat";
 import type { KyResponse } from "ky";
 

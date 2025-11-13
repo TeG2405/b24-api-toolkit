@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import { CODES, type Config } from "./types.ts";
+import { CODES, type Config } from "./types";
 
 dotenv.config({ path: "../.env.local" });
 

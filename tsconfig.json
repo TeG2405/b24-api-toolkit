@@ -1,43 +1,30 @@
 {
-  // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
-    // File Layout
-     "rootDir": ".",
-    // "outDir": "./dist",
+    /* === Основное === */
+    "target": "ES2020",                     // Версия JS для вывода
+    "module": "ESNext",                     // Использовать ESM (можно "CommonJS" для Node)
+    "declaration": true,                    // Генерировать .d.ts файлы
+    "outDir": "dist",                       // Куда складывать скомпилированные файлы
+    "rootDir": "src",                       // Где лежат исходники
 
-    // Environment Settings
-    // See also https://aka.ms/tsconfig/module
-    "module": "nodenext",
-    "target": "esnext",
-    "lib": ["esnext"],
-    "types": ["node"],
+    /* === Проверка типов === */
+    "strict": true,                         // Включает все строгие проверки
+    "noImplicitAny": true,                  // Запрещает неявный any
+    "strictNullChecks": true,               // Проверка на null / undefined
+    "noUnusedLocals": true,                 // Предупреждение о неиспользуемых переменных
+    "noUnusedParameters": true,             // Предупреждение о неиспользуемых параметрах
+    "noImplicitReturns": true,              // Проверяет, что все пути возвращают значение
+    "noFallthroughCasesInSwitch": true,     // Проверка switch
 
-    // Other Outputs
-    "sourceMap": false,
-    "declaration": false,
-    "declarationMap": false,
+    /* === Модули и пути === */
+    "moduleResolution": "node",             // Алгоритм резолвинга модулей
+    "esModuleInterop": true,                // Разрешает импорт default из CommonJS
+    "skipLibCheck": true,                   // Пропускает проверку типов в node_modules
+    "forceConsistentCasingInFileNames": true,
 
-    // Stricter Typechecking Options
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
-
-    // Style Options
-    // "noImplicitReturns": true,
-    // "noImplicitOverride": true,
-    // "noUnusedLocals": true,
-    // "noUnusedParameters": true,
-    // "noFallthroughCasesInSwitch": true,
-    // "noPropertyAccessFromIndexSignature": true,
-
-    // Recommended Options
-    "strict": true,
-    "jsx": "react-jsx",
-    "verbatimModuleSyntax": true,
-    "isolatedModules": true,
-    "noUncheckedSideEffectImports": true,
-    "moduleDetection": "force",
-    "skipLibCheck": true,
-    "allowImportingTsExtensions": true,
-
-  }
+    /* === Для удобства разработки === */
+    "sourceMap": true                       // Генерировать .map файлы
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts"]
 }

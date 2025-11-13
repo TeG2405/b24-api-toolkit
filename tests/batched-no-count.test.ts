@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import useApi from "./../src/index.ts";
+import useApi from "./../src";
 import nock from "nock";
 import { inRange, isEqual, mapValues } from "es-toolkit";
 import { castArray, forEach, get, reduce, reverse, set, size, slice } from "es-toolkit/compat";

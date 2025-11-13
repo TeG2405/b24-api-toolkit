@@ -1,5 +1,5 @@
 import ky from "ky";
-import settings from "./settings.ts";
+import settings from "./settings";
 
 const client = ky.extend({
   method: "post",

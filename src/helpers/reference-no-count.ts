@@ -1,4 +1,4 @@
-import type { ApiRecord, ApiRequestList } from "../types.js";
+import type { ApiRecord, ApiRequestList } from "../types";
 import { forEach, get, has, map, max, set, size } from "es-toolkit/compat";
 import { cloneDeep, compact, flatten, isNotNil, merge, zip } from "es-toolkit";
 

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import useApi from "./../src/index.ts";
+import useApi from "./../src";
 import nock from "nock";
-import { CODES } from "../src/types.js";
+import { CODES } from "../src/types";
 import { range } from "es-toolkit";
 import { ceil, divide, forEach, min, padStart, set, slice } from "es-toolkit/compat";
 

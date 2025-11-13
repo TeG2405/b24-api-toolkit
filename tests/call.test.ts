@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
-import useApi from "./../src/index.ts";
+import useApi from "./../src";
 import nock from "nock";
-import { CODES } from "../src/types.js";
+import { CODES } from "../src/types";
 
 const mockTime = {
   start: 1741699660.029826,

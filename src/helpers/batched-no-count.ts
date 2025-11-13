@@ -1,7 +1,7 @@
-import type { ApiRequestList, ResponseSuccess } from "../types.js";
+import type { ApiRequestList, ResponseSuccess } from "../types";
 import { forEach, get, has, map, max, min, set } from "es-toolkit/compat";
 import { cloneDeep, forEachRight, range } from "es-toolkit";
-import { useHelpers } from "./index.js";
+import { useHelpers } from ".";
 
 const useBatchedNoCount = ({ request, idKey, listSize }: { request: ApiRequestList; idKey: string; listSize: number; batchSize: number }) => {
   const { getListResult } = useHelpers();

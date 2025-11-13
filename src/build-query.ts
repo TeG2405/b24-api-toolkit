@@ -1,4 +1,4 @@
-import type { ApiRecord } from "./types.ts";
+import type { ApiRecord } from "./types";
 import qs from "qs";
 
 /**
