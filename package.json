@@ -1,8 +1,10 @@
 {
-  "name": "@intervolga/b24api",
+  "name": "b24-api-toolkit",
   "version": "1.0.0",
   "description": "Клиент для работы с bitrix24 API",
-  "homepage": "https://github.com/bubblesortt/b24api#readme",
+  "files": [
+    "dist/"
+  ],
   "license": "ISC",
   "type": "module",
   "main": "index.js",
@@ -15,7 +17,8 @@
     "build": "tsc",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "prepublishOnly": "npm run build"
   },
   "devDependencies": {
     "@types/node": "^24.3.1",
