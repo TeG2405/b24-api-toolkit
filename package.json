@@ -12,7 +12,7 @@
   "scripts": {
     "test": "vitest --run",
     "dev:test": "vitest",
-    "tsc": "tsc"
+    "tsc": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/node": "^24.3.1",
