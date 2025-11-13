@@ -70,11 +70,7 @@ describe("Call tests", () => {
       .reply(CODES.NOT_EXTENDED, {});
 
     const api = useApi();
-    await expect(
-      async () => await api.call({ method: "profile" }),
-    ).rejects.toThrowError(
-      `Request failed with status code ${CODES.NOT_EXTENDED}`,
-    );
+    await expect(async () => await api.call({ method: "profile" })).rejects.toThrowError(`Request failed with status code ${CODES.NOT_EXTENDED}`);
   });
 
   it("Запрос с ошибкой и ретраем по статусу", async () => {
@@ -85,11 +81,7 @@ describe("Call tests", () => {
       .reply(CODES.TOO_MANY_REQUESTS, {});
     const fetchSpy = vi.spyOn(globalThis, "fetch");
 
-    await expect(
-      async () => await api.call({ method: "profile" }),
-    ).rejects.toThrowError(
-      `Request failed with status code ${CODES.TOO_MANY_REQUESTS}`,
-    );
+    await expect(async () => await api.call({ method: "profile" })).rejects.toThrowError(`Request failed with status code ${CODES.TOO_MANY_REQUESTS}`);
     expect(fetchSpy).toHaveBeenCalledTimes(api.config.retry.attempts);
   }, 30000);
 
@@ -102,11 +94,7 @@ describe("Call tests", () => {
         error_description: "Method is blocked due to operation time limit.",
       });
 
-    await expect(
-      async () => await api.call({ method: "profile" }),
-    ).rejects.toThrowError(
-      `ACCESS_DENIED: Method is blocked due to operation time limit.`,
-    );
+    await expect(async () => await api.call({ method: "profile" })).rejects.toThrowError(`ACCESS_DENIED: Method is blocked due to operation time limit.`);
   });
 
   it("Успешный запрос с ошибкой и ретраем по коду ошибки", async () => {
@@ -120,11 +108,7 @@ describe("Call tests", () => {
       });
     const fetchSpy = vi.spyOn(globalThis, "fetch");
 
-    await expect(
-      async () => await api.call({ method: "profile" }),
-    ).rejects.toThrowError(
-      `OPERATION_TIME_LIMIT: Method is blocked due to operation time limit.`,
-    );
+    await expect(async () => await api.call({ method: "profile" })).rejects.toThrowError(`OPERATION_TIME_LIMIT: Method is blocked due to operation time limit.`);
     expect(fetchSpy).toHaveBeenCalledTimes(api.config.retry.attempts);
   }, 30000);
 
@@ -139,11 +123,7 @@ describe("Call tests", () => {
       });
     const fetchSpy = vi.spyOn(globalThis, "fetch");
 
-    await expect(
-      async () => await api.call({ method: "profile" }),
-    ).rejects.toThrowError(
-      `OPERATION_TIME_LIMIT: Method is blocked due to operation time limit.`,
-    );
+    await expect(async () => await api.call({ method: "profile" })).rejects.toThrowError(`OPERATION_TIME_LIMIT: Method is blocked due to operation time limit.`);
     expect(fetchSpy).toHaveBeenCalledTimes(api.config.retry.attempts);
   }, 30000);
 

@@ -2,16 +2,7 @@ import { describe, it, expect } from "vitest";
 import useApi from "./../src/index.ts";
 import nock from "nock";
 import { inRange, isEqual, mapValues } from "es-toolkit";
-import {
-  castArray,
-  forEach,
-  get,
-  reduce,
-  reverse,
-  set,
-  size,
-  slice,
-} from "es-toolkit/compat";
+import { castArray, forEach, get, reduce, reverse, set, size, slice } from "es-toolkit/compat";
 import { parse } from "qs";
 
 const mockTime = {
@@ -46,23 +37,17 @@ describe("batched no count tests", () => {
           const commands: Record<string, string> = get(body, "cmd", {});
           const output = {};
           forEach(commands, (command, key) => {
-            const [method, query] = command.split("?");
+            const [, query] = command.split("?");
             const params = parse(query!);
             const isReverse = isEqual(get(params, "order.ID"), "DESC");
             const fromId = Number(get(params, "filter[>ID]", -1));
-            if (size(castArray(fromId)) !== 1)
-              return [400, { error: "invalid filter" }];
+            if (size(castArray(fromId)) !== 1) return [400, { error: "invalid filter" }];
             const toId = Number(get(params, "filter[<ID]", total));
-            if (size(castArray(toId)) !== 1)
-              return [400, { error: "invalid filter" }];
+            if (size(castArray(toId)) !== 1) return [400, { error: "invalid filter" }];
             const data = reduce(
               result,
               (acc, item) => {
-                if (
-                  fromId + 1 !== toId &&
-                  inRange(item["ID"], fromId + 1, toId)
-                )
-                  acc.push(item);
+                if (fromId + 1 !== toId && inRange(item["ID"], fromId + 1, toId)) acc.push(item);
                 return acc;
               },
               [] as typeof result,

@@ -18,28 +18,15 @@ const useReferenceNoCount = ({
   withPayload: boolean;
 }) => {
   const filter = get(request, "parameters.filter");
-  if (request.parameters && request.parameters.order)
-    throw new Error(
-      "Ordering parameters are reserved in `referenceBatchedNoCount` method.",
-    );
+  if (request.parameters && request.parameters.order) throw new Error("Ordering parameters are reserved in `referenceBatchedNoCount` method.");
   const idFrom = `>${idKey}`;
-  if (filter && has(filter, idFrom))
-    throw new Error(
-      `Filter parameter "${idFrom}" is reserved in "referenceBatchedNoCount" method.`,
-    );
+  if (filter && has(filter, idFrom)) throw new Error(`Filter parameter "${idFrom}" is reserved in "referenceBatchedNoCount" method.`);
 
   const tailRequests = () => {
     return map(updates, (item) => {
-      if (has(item.filter, idFrom))
-        throw new Error(
-          `Filter parameters ${idFrom} is reserved in "referenceBatchedNoCount" method.`,
-        );
+      if (has(item.filter, idFrom)) throw new Error(`Filter parameters ${idFrom} is reserved in "referenceBatchedNoCount" method.`);
       const cloneRequest = cloneDeep(request);
-      set(
-        cloneRequest,
-        "parameters.filter",
-        merge(get(cloneRequest, "parameters.filter", {}), item.filter),
-      );
+      set(cloneRequest, "parameters.filter", merge(get(cloneRequest, "parameters.filter", {}), item.filter));
       set(cloneRequest, "parameters.start", -1);
       set(cloneRequest, "parameters.order", { ID: "ASC" });
       if (isNotNil(item.payload)) set(cloneRequest, "payload", item.payload);
@@ -47,13 +34,7 @@ const useReferenceNoCount = ({
     });
   };
 
-  const headRequests = ({
-    bodyRequests,
-    bodyResults,
-  }: {
-    bodyRequests: ApiRequestList[];
-    bodyResults: unknown[] | [unknown[], unknown[]];
-  }) => {
+  const headRequests = ({ bodyRequests, bodyResults }: { bodyRequests: ApiRequestList[]; bodyResults: unknown[] | [unknown[], unknown[]] }) => {
     const result: ApiRequestList[] = [];
     forEach(zip(bodyRequests, bodyResults), ([bodyRequest, bodyResult]) => {
       let payload;

@@ -1,9 +1,5 @@
 import type { Options } from "ky";
-import type {
-  ResponseBatchSchema,
-  ResponseErrorSchema,
-  ResponseSchema,
-} from "./schemas.ts";
+import type { ResponseBatchSchema, ResponseErrorSchema, ResponseSchema } from "./schemas.ts";
 import type * as z from "zod";
 
 export enum CODES {
@@ -128,37 +124,13 @@ export type ApiRequestList = {
 export type ApiRequestWithPayload = ApiRequest & { payload: unknown };
 
 export interface Batch {
-  (args: {
-    requests: ApiRequestWithPayload[];
-    batchSize?: number;
-    listMethod?: boolean;
-    withPayload: true;
-  }): Promise<Array<[ResponseSuccess["result"], unknown]>>;
+  (args: { requests: ApiRequestWithPayload[]; batchSize?: number; listMethod?: boolean; withPayload: true }): Promise<Array<[ResponseSuccess["result"], unknown]>>;
 
-  (args: {
-    requests: ApiRequest[];
-    batchSize?: number;
-    listMethod?: boolean;
-    withPayload?: false;
-  }): Promise<Array<ResponseSuccess["result"]>>;
+  (args: { requests: ApiRequest[]; batchSize?: number; listMethod?: boolean; withPayload?: false }): Promise<Array<ResponseSuccess["result"]>>;
 }
 
 export interface ReferenceBatchNoCount {
-  (args: {
-    request: ApiRequestList;
-    updates: Array<{ filter: ApiRecord; payload?: unknown }>;
-    idKey?: string;
-    listSize: number;
-    batchSize: number;
-    withPayload: true;
-  }): Promise<Array<[ResponseSuccess["result"], unknown]>>;
+  (args: { request: ApiRequestList; updates: Array<{ filter: ApiRecord; payload?: unknown }>; idKey?: string; listSize: number; batchSize: number; withPayload: true }): Promise<Array<[ResponseSuccess["result"], unknown]>>;
 
-  (args: {
-    request: ApiRequestList;
-    updates: Array<{ filter: ApiRecord; payload?: unknown }>;
-    idKey?: string;
-    listSize: number;
-    batchSize: number;
-    withPayload?: boolean;
-  }): Promise<Array<ResponseSuccess["result"]>>;
+  (args: { request: ApiRequestList; updates: Array<{ filter: ApiRecord; payload?: unknown }>; idKey?: string; listSize: number; batchSize: number; withPayload?: boolean }): Promise<Array<ResponseSuccess["result"]>>;
 }

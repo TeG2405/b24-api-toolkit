@@ -1,47 +1,15 @@
-import type {
-  ApiRecord,
-  ApiRequest,
-  ApiRequestList,
-  Batch,
-  ResponseSuccess,
-  ResponseType,
-} from "./types.ts";
-import {
-  ResponseBatchSchema,
-  ResponseErrorSchema,
-  ResponseSchema,
-} from "./schemas.ts";
+import type { ApiRecord, ApiRequest, ApiRequestList, Batch, ResponseSuccess, ResponseType } from "./types.ts";
+import { ResponseBatchSchema, ResponseErrorSchema, ResponseSchema } from "./schemas.ts";
 import client from "./client.ts";
 import buildQuery from "./build-query.ts";
 import config from "./settings.ts";
 import { chunk, compact, difference, mapValues, retry } from "es-toolkit";
-import {
-  first,
-  forEach,
-  get,
-  isEmpty,
-  join,
-  keys,
-  padStart,
-  reduce,
-  set,
-  values,
-  castArray,
-  size,
-  concat,
-} from "es-toolkit/compat";
+import { first, forEach, get, isEmpty, join, keys, padStart, reduce, set, values, castArray, size, concat } from "es-toolkit/compat";
 import { useHelpers } from "./helpers/index.ts";
 import { useBatchedNoCount } from "./helpers/batched-no-count.js";
 import { useReferenceNoCount } from "./helpers/reference-no-count.js";
 const useApi = () => {
-  const {
-    getTail,
-    getListResult,
-    shouldBatchRetry,
-    shouldCallRetry,
-    throwError,
-    isResponseError,
-  } = useHelpers();
+  const { getTail, getListResult, shouldBatchRetry, shouldCallRetry, throwError, isResponseError } = useHelpers();
 
   const call = async ({ method, parameters, options = {} }: ApiRequest) => {
     const settings = { json: parameters, ...options };
@@ -52,15 +20,10 @@ const useApi = () => {
         attempt++;
         const response = await client(method, settings);
         const body = await response.json<ResponseType>();
-        if (
-          shouldCallRetry({ response, body }) &&
-          attempt < config.retry.attempts
-        )
-          throw new Error("__RETRY__");
+        if (shouldCallRetry({ response, body }) && attempt < config.retry.attempts) throw new Error("__RETRY__");
         controller.abort();
         if (isResponseError(body)) throwError(body);
-        if (response.status >= 300)
-          throw new Error(`Request failed with status code ${response.status}`);
+        if (response.status >= 300) throw new Error(`Request failed with status code ${response.status}`);
         return ResponseSchema.parse(body);
       },
       {
@@ -72,32 +35,23 @@ const useApi = () => {
   };
 
   //@ts-ignore
-  const batch: Batch = async ({
-    requests,
-    batchSize,
-    listMethod,
-    withPayload,
-  }) => {
+  const batch: Batch = async ({ requests, batchSize, listMethod, withPayload }) => {
     const size = batchSize || config.batchSize;
     const chunks = chunk(requests, size);
     const responses: ResponseSuccess["result"][] = [];
     const responsesWithPayload: [ResponseSuccess["result"], unknown][] = [];
     for (const chunk of chunks) {
       const width = String(chunk.length).length;
-      const commands: Record<string, { cmd: string; payload?: unknown }> =
-        reduce(
-          chunk,
-          (acc, curr, idx) => {
-            const key = `_${padStart(String(idx), width, "0")}`;
-            const cmd = join(
-              compact([curr.method, buildQuery(curr.parameters || {})]),
-              "?",
-            );
-            const payload = get(curr, "payload");
-            return set(acc, key, { cmd, payload });
-          },
-          {},
-        );
+      const commands: Record<string, { cmd: string; payload?: unknown }> = reduce(
+        chunk,
+        (acc, curr, idx) => {
+          const key = `_${padStart(String(idx), width, "0")}`;
+          const cmd = join(compact([curr.method, buildQuery(curr.parameters || {})]), "?");
+          const payload = get(curr, "payload");
+          return set(acc, key, { cmd, payload });
+        },
+        {},
+      );
       const parameters = {
         halt: true,
         cmd: mapValues(commands, (command) => command.cmd),
@@ -113,30 +67,18 @@ const useApi = () => {
           const response = await call({ method: "batch", parameters });
           const result = ResponseBatchSchema.parse(response.result);
           const errors = result.result_error;
-          const missedResultKeys = difference(
-            keys(commands),
-            keys(result.result),
-          );
-          const missedResultTimeKeys = difference(
-            keys(commands),
-            keys(result.result_time),
-          );
-          if (shouldBatchRetry(errors) && attempt < config.retry.attempts)
-            throw new Error("__RETRY__");
+          const missedResultKeys = difference(keys(commands), keys(result.result));
+          const missedResultTimeKeys = difference(keys(commands), keys(result.result_time));
+          if (shouldBatchRetry(errors) && attempt < config.retry.attempts) throw new Error("__RETRY__");
           controller.abort();
-          if (!isEmpty(errors))
-            throwError(ResponseErrorSchema.parse(first(values(errors))));
+          if (!isEmpty(errors)) throwError(ResponseErrorSchema.parse(first(values(errors))));
           if (!isEmpty(missedResultKeys)) {
             const key = String(first(missedResultKeys));
-            throw new Error(
-              `Expecting 'result' to contain result for command {{'${key}': '${get(commands, [key, "cmd"])}'}}.`,
-            );
+            throw new Error(`Expecting 'result' to contain result for command {{'${key}': '${get(commands, [key, "cmd"])}'}}.`);
           }
           if (!isEmpty(missedResultTimeKeys)) {
             const key = String(first(missedResultTimeKeys));
-            throw new Error(
-              `Expecting 'result_time' to contain result for command {{'${key}': '${get(commands, [key, "cmd"])}'}}.`,
-            );
+            throw new Error(`Expecting 'result_time' to contain result for command {{'${key}': '${get(commands, [key, "cmd"])}'}}.`);
           }
           return result;
         },
@@ -155,22 +97,14 @@ const useApi = () => {
           next: get(result.result_next, key),
         });
         const data = listMethod ? getListResult(res.result) : res.result;
-        withPayload
-          ? responsesWithPayload.push([data, item.payload])
-          : responses.push(data);
+        withPayload ? responsesWithPayload.push([data, item.payload]) : responses.push(data);
       });
     }
 
     return withPayload ? responsesWithPayload : responses;
   };
 
-  const listSequential = async ({
-    request,
-    listSize,
-  }: {
-    request: ApiRequest;
-    listSize: number;
-  }) => {
+  const listSequential = async ({ request, listSize }: { request: ApiRequest; listSize: number }) => {
     const result: unknown[] = [];
     const size = listSize || config.listSize;
     set(request, "parameters.start", 0);
@@ -181,24 +115,13 @@ const useApi = () => {
     for (const tail of tailed) {
       const res = await call(tail);
       const start = Number(tail.parameters?.start || 0);
-      if (res.next && res.next != start + size)
-        throw new Error(
-          `Expecting next list chunk to start at ${start + size}. Got: ${res.next}`,
-        );
+      if (res.next && res.next != start + size) throw new Error(`Expecting next list chunk to start at ${start + size}. Got: ${res.next}`);
       forEach(getListResult(res.result), (item) => result.push(item));
     }
     return result;
   };
 
-  const listBatched = async ({
-    request,
-    listSize,
-    batchSize,
-  }: {
-    request: ApiRequest;
-    listSize: number;
-    batchSize: number;
-  }) => {
+  const listBatched = async ({ request, listSize, batchSize }: { request: ApiRequest; listSize: number; batchSize: number }) => {
     const listSizeTotal = listSize || config.listSize;
     const batchSizeTotal = batchSize || config.batchSize;
     const result: unknown[] = [];
@@ -215,17 +138,7 @@ const useApi = () => {
     return result;
   };
 
-  const listBatchedNoCount = async ({
-    request,
-    idKey = "ID",
-    listSize,
-    batchSize,
-  }: {
-    request: ApiRequestList;
-    idKey?: string;
-    listSize: number;
-    batchSize: number;
-  }) => {
+  const listBatchedNoCount = async ({ request, idKey = "ID", listSize, batchSize }: { request: ApiRequestList; idKey?: string; listSize: number; batchSize: number }) => {
     const listSizeTotal = listSize || config.listSize;
     const batchSizeTotal = batchSize || config.batchSize;
     const result: unknown[] = [];
@@ -235,10 +148,7 @@ const useApi = () => {
       listSize: listSizeTotal,
       batchSize: batchSizeTotal,
     });
-    const boundaryRequests = [
-      batchedHelper.headRequest(),
-      batchedHelper.tailRequest(),
-    ];
+    const boundaryRequests = [batchedHelper.headRequest(), batchedHelper.tailRequest()];
     const [headResult, tailResult] = await batch({
       requests: boundaryRequests,
     });
@@ -251,21 +161,11 @@ const useApi = () => {
       listMethod: true,
     });
     forEach(bodyResults, (item) => result.push(...castArray(item)));
-    forEach(batchedHelper.tailResults({ headResult, tailResult }), (item) =>
-      result.push(item),
-    );
+    forEach(batchedHelper.tailResults({ headResult, tailResult }), (item) => result.push(item));
     return result;
   };
 
-  const updatesBatch = async ({
-    bodyRequests,
-    headRequests,
-    referenceHelper,
-  }: {
-    bodyRequests: ApiRequestList[];
-    headRequests: ApiRequestList[];
-    referenceHelper: ReturnType<typeof useReferenceNoCount>;
-  }) => {
+  const updatesBatch = async ({ bodyRequests, headRequests, referenceHelper }: { bodyRequests: ApiRequestList[]; headRequests: ApiRequestList[]; referenceHelper: ReturnType<typeof useReferenceNoCount> }) => {
     const result = await batch({
       requests: concat(headRequests, bodyRequests),
       batchSize: referenceHelper.batchSize,
@@ -321,9 +221,7 @@ const useApi = () => {
       });
       bodyRequests = [];
       headRequests = updates.headRequests;
-      forEach(referenceHelper.bodyResults(updates.bodyResults), (item) =>
-        result.push(item),
-      );
+      forEach(referenceHelper.bodyResults(updates.bodyResults), (item) => result.push(item));
     }
     while (!isEmpty(headRequests) || !isEmpty(bodyRequests)) {
       const updates = await updatesBatch({
@@ -333,9 +231,7 @@ const useApi = () => {
       });
       bodyRequests = [];
       headRequests = updates.headRequests;
-      forEach(referenceHelper.bodyResults(updates.bodyResults), (item) =>
-        result.push(item),
-      );
+      forEach(referenceHelper.bodyResults(updates.bodyResults), (item) => result.push(item));
     }
     return result;
   };

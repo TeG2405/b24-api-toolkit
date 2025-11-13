@@ -29,11 +29,7 @@ const mockLeads = [
 
 describe("Batch tests", () => {
   it("Обычный запрос", async () => {
-    const result = [
-      mockProfile,
-      { items: mockLeads },
-      [{ ID: "1", NAME: "Main department", SORT: 500, UF_HEAD: "1" }],
-    ];
+    const result = [mockProfile, { items: mockLeads }, [{ ID: "1", NAME: "Main department", SORT: 500, UF_HEAD: "1" }]];
     nock(process.env.WEBHOOK_URL || "")
       .post("/batch", {
         halt: true,
@@ -102,11 +98,7 @@ describe("Batch tests", () => {
     await expect(
       async () =>
         await api.batch({
-          requests: [
-            { method: "profile" },
-            { method: "telephony.externalLine.get" },
-            { method: "department.get", parameters: { ID: 1 } },
-          ],
+          requests: [{ method: "profile" }, { method: "telephony.externalLine.get" }, { method: "department.get", parameters: { ID: 1 } }],
         }),
     ).rejects.toThrowError(`insufficient_scope: no description`);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
@@ -143,11 +135,7 @@ describe("Batch tests", () => {
     await expect(
       async () =>
         await api.batch({
-          requests: [
-            { method: "profile" },
-            { method: "telephony.externalLine.get" },
-            { method: "department.get", parameters: { ID: 1 } },
-          ],
+          requests: [{ method: "profile" }, { method: "telephony.externalLine.get" }, { method: "department.get", parameters: { ID: 1 } }],
         }),
     ).rejects.toThrowError(`operation_time_limit: no description`);
     expect(fetchSpy).toHaveBeenCalledTimes(api.config.retry.attempts);
@@ -155,11 +143,7 @@ describe("Batch tests", () => {
 
   it("Успешный запрос с ошибкой, ретраем по коду ошибки и получения ответа", async () => {
     const attempts = 3;
-    const result = [
-      mockProfile,
-      { items: mockLeads },
-      [{ ID: "1", NAME: "Main department", SORT: 500, UF_HEAD: "1" }],
-    ];
+    const result = [mockProfile, { items: mockLeads }, [{ ID: "1", NAME: "Main department", SORT: 500, UF_HEAD: "1" }]];
     nock(process.env.WEBHOOK_URL || "")
       .post("/batch", {
         halt: true,
@@ -261,9 +245,7 @@ describe("Batch tests", () => {
             { method: "department.get", parameters: { ID: 1 } },
           ],
         }),
-    ).rejects.toThrowError(
-      `Expecting 'result' to contain result for command {{'_1': 'crm.lead.list?select%5B0%5D=ID&select%5B1%5D=STATUS_ID&start=-1'}}.`,
-    );
+    ).rejects.toThrowError(`Expecting 'result' to contain result for command {{'_1': 'crm.lead.list?select%5B0%5D=ID&select%5B1%5D=STATUS_ID&start=-1'}}.`);
   }, 30000);
 
   it("Запрос с ошибкой из за недостающего ключа в result_time", async () => {
@@ -304,9 +286,7 @@ describe("Batch tests", () => {
             { method: "department.get", parameters: { ID: 1 } },
           ],
         }),
-    ).rejects.toThrowError(
-      `Expecting 'result_time' to contain result for command {{'_1': 'crm.lead.list?select%5B0%5D=ID&select%5B1%5D=STATUS_ID&start=-1'}}.`,
-    );
+    ).rejects.toThrowError(`Expecting 'result_time' to contain result for command {{'_1': 'crm.lead.list?select%5B0%5D=ID&select%5B1%5D=STATUS_ID&start=-1'}}.`);
   }, 30000);
 
   it("Запрос с payload", async () => {

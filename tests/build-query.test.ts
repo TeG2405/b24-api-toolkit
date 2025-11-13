@@ -12,9 +12,7 @@ describe("buildQuery", () => {
     const q = buildQuery({ user: { name: "Ann", tags: ["dev", "js"] } });
     const q1 = buildQuery({ select: ["ID", "STATUS_ID"], start: -1 });
 
-    expect(q).toEqual(
-      "user%5Bname%5D=Ann&user%5Btags%5D%5B0%5D=dev&user%5Btags%5D%5B1%5D=js",
-    );
+    expect(q).toEqual("user%5Bname%5D=Ann&user%5Btags%5D%5B0%5D=dev&user%5Btags%5D%5B1%5D=js");
     expect(q1).toEqual("select%5B0%5D=ID&select%5B1%5D=STATUS_ID&start=-1");
   });
 

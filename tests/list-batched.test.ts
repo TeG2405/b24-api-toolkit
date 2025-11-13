@@ -3,15 +3,7 @@ import useApi from "./../src/index.ts";
 import nock from "nock";
 import { CODES } from "../src/types.js";
 import { range } from "es-toolkit";
-import {
-  ceil,
-  divide,
-  forEach,
-  min,
-  padStart,
-  set,
-  slice,
-} from "es-toolkit/compat";
+import { ceil, divide, forEach, min, padStart, set, slice } from "es-toolkit/compat";
 
 const mockTime = {
   start: 1741699660.029826,
