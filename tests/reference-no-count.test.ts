@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import useApi from "./../src";
 import nock from "nock";
-import { chunk, mapValues, range, sortBy, zipWith } from "es-toolkit";
-import { castArray, forEach, get, reduce, set, size, slice } from "es-toolkit/compat";
+import { chunk, mapValues, range, sortBy } from "es-toolkit";
+import { castArray, forEach, get, reduce, set, size, slice, filter } from "es-toolkit/compat";
 import { parse } from "qs";
 
 const mockTime = {
@@ -98,7 +98,6 @@ describe("Reference batched no count tests", () => {
     30000,
   );
 
-  // TODO: похоже ошибка происходит из значения total. При total = 10 все ок, но если больше, то ломается
   it.each([
     { total: 10, listSize: 50, batch: 1 },
     { total: 10, listSize: 50, batch: 50 },
@@ -174,13 +173,16 @@ describe("Reference batched no count tests", () => {
         batchSize: batch,
         withPayload: true,
       });
-      const chunked = chunk(result, total);
-      const test = zipWith(
-        chunked,
-        Array.from(Array(total), (_, idx) => idx),
-        (a, b) => [a || [], b],
-      );
-      expect(test).toEqual(res);
+      const test: [any[], number][] = [];
+      forEach(range(total), (id) => {
+        const data = filter(result, (item) => item.ENTITY_ID === id);
+        const pages = data.length ? chunk(data, listSize) : [];
+        forEach(pages, (page) => test.push([page, id]));
+        if (data.length % listSize === 0 || !data.length) test.push([[], id]);
+      });
+      const sortedRes = sortBy(res, [(item: any) => item[1], (item: any) => item[0].length]);
+      const sortedTest = sortBy(test, [(item: any) => item[1], (item: any) => item[0].length]);
+      expect(sortedRes).toEqual(sortedTest);
       nock.cleanAll();
     },
     30000,
