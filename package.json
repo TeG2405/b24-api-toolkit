@@ -1,7 +1,8 @@
 {
   "name": "b24-api-toolkit",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Клиент для работы с bitrix24 API",
+  "repository": "https://github.com/TeG2405/b24-api-toolkit",
   "files": [
     "dist/"
   ],
